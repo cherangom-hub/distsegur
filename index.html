@@ -272,7 +272,12 @@ td .l{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7
       <div class="uoInfo" id="uoInfo">Selecciona munición del catálogo: se fija NEQ (TNT eq.) y metralla automáticamente, con enlace de referencia visual para identificación.</div>
     </div>
 
-    <button class="gpsBtn" id="gpsBtn" type="button">◎ Mi posición</button>
+    <label>Origen de la amenaza</label>
+    <div class="seg">
+      <button id="btnGPS" class="on" type="button">◎ Mi ubicación GPS</button>
+      <button id="btnMan" type="button">✛ Punto en el mapa</button>
+    </div>
+    <button class="gpsBtn" id="gpsBtn" type="button">◎ Seguir mi posición en vivo</button>
     <div id="coords">Toca el mapa para colocar la amenaza en cualquier punto.</div>
 
     <label for="kg">NEQ / carga TNT equivalente — ajusta con − / +</label>
@@ -297,7 +302,7 @@ td .l{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7
         <span><i class="dot" style="background:var(--orange)"></i> Onda de choque · cero daño auditivo</span>
         <span><i class="dot" style="background:var(--yellow)"></i> Fragmentación · personal al descubierto</span>
         <span><i class="dot" style="background:var(--green)"></i> Rotura de cristales / desalojo</span>
-        <span><i class="dot" style="background:#8FA3B0"></i> Daño estructural (madera / ladrillo / hormigón)</span>
+        <span><i class="dot" style="background:#8FA3B0"></i> Daño estructural — círculos DISCONTINUOS (madera / ladrillo / hormigón)</span>
       </div>
     </div>
     <div class="panel" style="margin-top:16px">
@@ -320,6 +325,7 @@ iedSec=document.getElementById('iedSec'),uxoSec=document.getElementById('uxoSec'
 mIed=document.getElementById('mIed'),mUxo=document.getElementById('mUxo'),
 weffEl=document.getElementById('weff'),tb=document.querySelector('#tbl tbody'),
 uToggle=document.getElementById('uToggle'),gpsBtn=document.getElementById('gpsBtn'),
+btnGPS=document.getElementById('btnGPS'),btnMan=document.getElementById('btnMan'),
 coordsEl=document.getElementById('coords');
 let mode='ied', units='metric', fragVal='1';
 let wkg=1;const LB=2.20462;
@@ -367,13 +373,30 @@ function refresh(){
   weffEl.textContent='W = '+(units==='metric'?w.toFixed(3)+' kg':(w*LB).toFixed(2)+' lb')+' TNT eq · K = '+(units==='metric'?'15,4 m/kg^⅓':'38,8 ft/lb^⅓');
   tb.innerHTML=out.map(o=>'<tr><td><span class="l" style="background:'+o.col+'"></span>'+o.lbl+'</td><td class="num">'+fmt(o.r)+'</td></tr>').join('');
 }
-map.on('click',e=>{placeThreat(e.latlng);watch=false;gpsBtn.classList.remove('on');gpsBtn.textContent='◎ Mi posición';});
+map.on('click',e=>{setOrigin(false);placeThreat(e.latlng);});
 function placeThreat(ll){
   if(!marker){marker=L.marker(ll,{icon:threatIcon,draggable:true}).addTo(map);marker.on('dragend',refresh);}
   else marker.setLatLng(ll);
   refresh();
-  coordsEl.textContent='Amenaza: '+ll.lat.toFixed(6)+', '+ll.lng.toFixed(6)+' — arrastra el punto o toca el mapa para moverla.';
+  coordsEl.innerHTML='LAT/LON: '+ll.lat.toFixed(6)+', '+ll.lng.toFixed(6)+fmtCoords(ll)+'<br>Arrastra el punto o toca el mapa para moverla.';
 }
+function toUTM(lat,lng){
+  const a=6378137,k0=0.9996,e2=0.00669437999014;
+  const zone=Math.floor((lng+180)/6)+1;
+  const phi=lat*Math.PI/180,lam=lng*Math.PI/180,lam0=((zone-1)*6-180+3)*Math.PI/180;
+  const N=a/Math.sqrt(1-e2*Math.sin(phi)*Math.sin(phi));
+  const T=Math.tan(phi)*Math.tan(phi),C=e2/(1-e2)*Math.cos(phi)*Math.cos(phi),A=(lam-lam0)*Math.cos(phi);
+  const M=a*((1-e2/4-3*e2*e2/64-5*e2*e2*e2/256)*phi-(3*e2/8+3*e2*e2/32+45*e2*e2*e2/1024)*Math.sin(2*phi)+(15*e2*e2/256+45*e2*e2*e2/1024)*Math.sin(4*phi)-(35*e2*e2*e2/3072)*Math.sin(6*phi));
+  let x=500000+k0*N*(A+(1-T+C)*A*A*A/6+(5-18*T+T*T+72*C-58*e2)*A*A*A*A*A/120);
+  let y=k0*(M+N*Math.tan(phi)*(A*A/2+(5-T+9*C+4*C*C)*A*A*A*A/24+(61-58*T+T*T+600*C-330*e2)*A*A*A*A*A*A/720));
+  if(lat<0)y+=10000000;
+  const band='CDEFGHJKLMNPQRSTUVWX'[Math.min(20,Math.floor((Math.max(-80,Math.min(79.9,lat))+80)/8))];
+  const colSet=['ABCDEFGH','JKLMNPQR','STUVWXYZ'][(zone-1)%3];
+  const rowSet=zone%2?'ABCDEFGHJKLMNPQRSTUV':'FGHJKLMNPQRSTUVABCDE';
+  const sq=colSet[Math.floor(x/100000)-1]+rowSet[Math.floor(y/100000)%20];
+  return {zone,band,x:Math.round(x),y:Math.round(y),mgrs:zone+band+' '+sq+' '+String(Math.floor(x%100000)).padStart(5,'0')+' '+String(Math.floor(y%100000)).padStart(5,'0')};
+}
+function fmtCoords(ll){const u=toUTM(ll.lat,ll.lng);return '<br>UTM: '+u.zone+u.band+' · E '+u.x+' m · N '+u.y+' m<br>MGRS: '+u.mgrs;}
 
 /* ---- GPS ---- */
 let watch=false,watchId=null;
@@ -382,7 +405,7 @@ function setGPS(pos){
   placeThreat(ll);
   map.setView(ll,Math.max(map.getZoom(),15),{animate:true});
   const acc=pos.coords.accuracy?Math.round(pos.coords.accuracy):null;
-  coordsEl.textContent='Amenaza en tu posición GPS'+(acc?' (precisión ±'+acc+' m)':'')+': '+ll.lat.toFixed(6)+', '+ll.lng.toFixed(6);
+  coordsEl.innerHTML='AMENAZA EN TU POSICIÓN GPS'+(acc?' (precisión ±'+acc+' m)':'')+'<br>LAT/LON: '+ll.lat.toFixed(6)+', '+ll.lng.toFixed(6)+fmtCoords(ll);
 }
 function gpsError(err){
   gpsBtn.classList.remove('on');
@@ -396,6 +419,17 @@ gpsBtn.addEventListener('click',()=>{
   watchId=navigator.geolocation.watchPosition(setGPS,gpsError,{enableHighAccuracy:true,maximumAge:2000,timeout:15000});
   watch=true;
 });
+
+/* ---- Origen de la amenaza: GPS o manual ---- */
+let gpsMode=true;
+function setOrigin(gps){
+  gpsMode=gps;
+  btnGPS.classList.toggle('on',gps);btnMan.classList.toggle('on',!gps);
+  gpsBtn.style.display=gps?'block':'none';
+  if(!gps&&watch){navigator.geolocation.clearWatch(watchId);watch=false;watchId=null;gpsBtn.classList.remove('on');gpsBtn.textContent='◎ Seguir mi posición en vivo';coordsEl.textContent='Modo manual: toca el mapa para colocar la amenaza.';}
+}
+btnGPS.addEventListener('click',()=>setOrigin(true));
+btnMan.addEventListener('click',()=>setOrigin(false));
 
 /* ---- Modo / unidades / catálogo ---- */
 function setMode(m){
