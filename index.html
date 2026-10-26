@@ -317,9 +317,9 @@ function radii(){
 function fmt(m){return units==='metric'?(m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m'):Math.round(m*3.28084)+' ft'}
 
 /* ---- Mapa Leaflet ---- */
-const TH=['https://{s}.basemaps.','cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'];
+const TH=['https://tile.','openstreetmap.org/{z}/{x}/{y}.png'];
 const map=L.map('map',{zoomControl:true}).setView([40.4168,-3.7038],13);
-L.tileLayer(TH.join(''),{maxZoom:20,subdomains:'abcd',attribution:'© OpenStreetMap · © CARTO'}).addTo(map);
+L.tileLayer(TH.join(''),{maxZoom:19,attribution:'© Colaboradores de OpenStreetMap'}).addTo(map);
 L.control.scale({imperial:false,metric:true}).addTo(map);
 let marker=null,circles=[];
 const threatIcon=L.divIcon({className:'',html:'<div style="width:16px;height:16px;border-radius:50%;background:#FF3B30;border:2px solid #fff;box-shadow:0 0 0 2px #FF3B3055"></div>',iconSize:[16,16],iconAnchor:[8,8]});
@@ -380,7 +380,13 @@ function pickUXO(){
   const parts=uo.value.split('|');
   fragVal='1';setKg(+parts[0]);
   const cat=uo.selectedOptions[0].closest('optgroup').label;
-  uoInfo.textContent=cat+' · '+parts[2]+' — NEQ '+parts[0]+' kg TNT eq. aplicado (metralla sí). Ref. visual: '+parts[3];
+  uoInfo.textContent='';
+  uoInfo.append(cat+' · '+parts[2]+' — NEQ '+parts[0]+' kg TNT eq. aplicado (metralla sí). ');
+  const a=document.createElement('a');
+  a.href=parts[3];a.target='_blank';a.rel='noopener';
+  a.textContent='Ref. visual para identificación →';
+  a.style.cssText='color:#4FA3E3;text-decoration:underline';
+  uoInfo.append(a);
 }
 uo.addEventListener('change',pickUXO);
 cont.addEventListener('change',()=>{if(mode==='ied')setKg(+cont.value.split('|')[0])});
