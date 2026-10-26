@@ -26,9 +26,26 @@ h1 .red{color:var(--red)}
 .panel h2{font-family:'Saira Condensed',sans-serif;font-weight:700;font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
 label{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:12px 0 5px}
 label:first-of-type{margin-top:0}
-select,input[type=number]{width:100%;background:#0D1319;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:inherit;font-size:14px;padding:11px 10px;min-height:44px;appearance:none}
+input[type=number]{width:100%;background:#0D1319;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:inherit;font-size:14px;padding:11px 10px;min-height:44px}
+select{width:100%;background:#0D1319;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:inherit;font-size:14px;padding:11px 34px 11px 10px;min-height:44px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%234FA3E3' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
 select:focus,input:focus{outline:2px solid var(--blue);outline-offset:1px}
-.seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+#expMilLbl,#expMil{display:none}
+#expMil.vis,#expMilLbl.vis{display:block}
+optgroup[label="Minas antipersonal"]{color:#FF3B30}
+optgroup[label="Minas anticarro"]{color:#FF9F0A}
+optgroup[label="Granadas de mano"]{color:#FFD60A}
+optgroup[label="Morteros"]{color:#B9C4CC}
+optgroup[label="Cohetes / RPG"]{color:#FF9F0A}
+optgroup[label="Proyectiles de artillería"]{color:#8FA3B0}
+optgroup[label="Bombas de aviación"]{color:#FF3B30}
+optgroup[label="Submuniciones"]{color:#FFD60A}
+optgroup[label="Misiles anticarro (ATGM)"]{color:#4FA3E3}
+optgroup[label="Misiles tierra-aire / MANPADS"]{color:#4FA3E3}
+optgroup[label="Misiles aire-aire"]{color:#4FA3E3}
+optgroup[label="Misiles de crucero / antibuque (europeos)"]{color:#4FA3E3}
+optgroup[label="Misiles aire-tierra"]{color:#4FA3E3}
+optgroup[label="Munición para drones"]{color:#FF9F0A}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .seg button{background:#0D1319;border:0;color:var(--dim);font-family:inherit;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:11px 0;min-height:44px;cursor:pointer}
 .seg button.on{background:var(--blue);color:#06121C;font-weight:600}
 .seg button.on.uxo{background:var(--red);color:#fff}
@@ -83,7 +100,6 @@ td .l{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7
     <div class="seg">
       <button id="mIed" class="on" type="button">IED</button>
       <button id="mUxo" type="button">UXO</button>
-      <button id="uToggle" class="on" type="button">kg · m</button>
     </div>
 
     <div id="iedSec" class="vis">
@@ -102,7 +118,18 @@ td .l{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7
       <select id="exp">
         <option value="0.6">HME (TATP / peróxidos / nitratos)</option>
         <option value="0.8">Industria civil (dinamita / ANFO)</option>
-        <option value="1">Militar (TNT / C-4 / SEMTEX)</option>
+        <option value="mil">Militar — elegir explosivo…</option>
+      </select>
+      <label for="expMil" id="expMilLbl">Explosivo militar</label>
+      <select id="expMil">
+        <option value="1">TNT — 1,00 (referencia)</option>
+        <option value="1.34">C-4 (91% RDX) — 1,34</option>
+        <option value="1.35">Semtex (RDX + PETN) — 1,35</option>
+        <option value="1.6">Hexógeno / RDX — 1,60</option>
+        <option value="1.7">Octógeno / HMX — 1,70</option>
+        <option value="1.66">PETN — 1,66</option>
+        <option value="1.54">Pentolita (TNT + PETN) — 1,54</option>
+        <option value="0.55">Pólvora negra — 0,55</option>
       </select>
       <label for="frag">Metralla</label>
       <select id="frag">
@@ -209,7 +236,7 @@ td .l{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7
           <option value="0.5|1|Starstreak (GBR) dardos 0,5 kg|https://en.wikipedia.org/wiki/Starstreak">Starstreak — 0,5 kg NEQ</option>
           <option value="73|1|MIM-104 Patriot PAC-3 73 kg|https://en.wikipedia.org/wiki/MIM-104_Patriot">Patriot PAC-3 — 73 kg NEQ</option>
         </optgroup>
-        <optgroup label="Misiles aire-aire (europeos)">
+        <optgroup label="MISILES AIRE-AIRE">
           <option value="11.4|1|IRIS-T (DEU) 11,4 kg|https://en.wikipedia.org/wiki/IRIS-T">IRIS-T — 11,4 kg NEQ</option>
           <option value="20|1|Meteor MBDA 20 kg|https://en.wikipedia.org/wiki/Meteor_(missile)">Meteor — 20 kg NEQ</option>
           <option value="12|1|MICA IR/EM (FRA) 12 kg|https://en.wikipedia.org/wiki/MICA_(missile)">MICA IR/EM — 12 kg NEQ</option>
@@ -255,6 +282,10 @@ td .l{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7
       <button id="plus" type="button" aria-label="Aumentar carga">+</button>
     </div>
     <p style="margin-top:14px" class="W" id="weff"></p>
+    <label for="uToggle">Unidades</label>
+    <div class="seg">
+      <button id="uToggle" class="on" type="button">kg · m</button>
+    </div>
   </div>
 
   <div>
@@ -301,7 +332,7 @@ const RANGES=[
  [2.9,'#5E7383','Daño estructural — hormigón (≈4–5 psi)',1]
 ];
 function Z(v){return units==='metric'?v:v*IMP}
-function W(){return Math.max(.05,wkg*(mode==='ied'?+exp.value:1))}
+function W(){return Math.max(.05,wkg*(mode==='ied'?(exp.value==='mil'?+expMil.value:+exp.value):1))}
 function step(){const k=+kg.value;return k<1?0.05:k<10?0.5:k<100?5:10}
 function setKg(v){wkg=Math.max(0.05,Math.round(v*100)/100);syncKg();refresh()}
 function syncKg(){kg.value=units==='metric'?(+wkg).toFixed(3):(wkg*LB).toFixed(2)}
@@ -394,7 +425,7 @@ document.getElementById('plus').addEventListener('click',()=>setKg(wkg+step()));
 document.getElementById('minus').addEventListener('click',()=>setKg(wkg-step()));
 function setUnits(u){units=u;uToggle.textContent=units==='metric'?'kg · m':'lb · ft';syncKg();refresh()}
 uToggle.addEventListener('click',()=>setUnits(units==='metric'?'imperial':'metric'));
-exp.addEventListener('change',refresh);
+exp.addEventListener('change',function(){const mil=exp.value==='mil';expMilLbl.classList.toggle('vis',mil);expMil.classList.toggle('vis',mil);refresh();});
 frag.addEventListener('change',refresh);
 kg.addEventListener('input',()=>{const d=+kg.value;wkg=units==='metric'?d:d/LB;refresh();});
 refresh();
