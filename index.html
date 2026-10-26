@@ -69,6 +69,9 @@ td .l{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7
 #iedSec,#uxoSec{display:none}
 #iedSec.vis,#uxoSec.vis{display:block}
 #coords{font-size:11px;color:var(--dim);margin-top:8px}
+.coordBox{background:#0D1319;border:1px solid var(--line);border-radius:6px;padding:12px;font-size:13.5px;line-height:2.1;color:var(--ink)}
+.coordBox b{display:inline-block;min-width:86px;color:var(--blue);font-weight:600;letter-spacing:.08em}
+@media(max-width:859px){.coordBox{font-size:12.5px;line-height:1.9;padding:10px}.coordBox b{min-width:74px}}
 @media(max-width:859px){
   .wrap{padding:12px 10px 90px}
   h1{font-size:32px}
@@ -313,6 +316,10 @@ td .l{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7
       </table>
       <p class="note">Herramienta orientativa para personal de seguridad, EOR / EOD / TEDAX. Radios calculados con distancias escaladas Z (K = 15,4 m/kg^⅓) sobre la carga TNT equivalente. El GPS es el del navegador; en exteriores la precisión es de metros, en interiores puede degradarse. La cartografía es de OpenStreetMap (colaboradores).</p>
     </div>
+    <div class="panel" style="margin-top:16px">
+      <h2>04 · Coordenadas del punto de amenaza</h2>
+      <div id="coordsBox" class="coordBox">Coloca la amenaza en el mapa (GPS o toque manual) para ver aquí sus coordenadas en LAT/LON, UTM y MGRS.</div>
+    </div>
   </div>
 </div>
 </div>
@@ -378,7 +385,12 @@ function placeThreat(ll){
   if(!marker){marker=L.marker(ll,{icon:threatIcon,draggable:true}).addTo(map);marker.on('dragend',refresh);}
   else marker.setLatLng(ll);
   refresh();
-  coordsEl.innerHTML='LAT/LON: '+ll.lat.toFixed(6)+', '+ll.lng.toFixed(6)+fmtCoords(ll)+'<br>Arrastra el punto o toca el mapa para moverla.';
+  updateCoords(ll);
+  coordsEl.textContent='Amenaza colocada en el mapa. Coordenadas detalladas en la sección 04.';
+}
+function updateCoords(ll){
+  const u=toUTM(ll.lat,ll.lng);
+  document.getElementById('coordsBox').innerHTML='<div><b>LAT/LON</b> '+ll.lat.toFixed(6)+', '+ll.lng.toFixed(6)+'</div><div><b>UTM</b> '+u.zone+u.band+' · E '+u.x+' m · N '+u.y+' m</div><div><b>MGRS</b> '+u.mgrs+'</div>';
 }
 function toUTM(lat,lng){
   const a=6378137,k0=0.9996,e2=0.00669437999014;
@@ -405,7 +417,8 @@ function setGPS(pos){
   placeThreat(ll);
   map.setView(ll,Math.max(map.getZoom(),15),{animate:true});
   const acc=pos.coords.accuracy?Math.round(pos.coords.accuracy):null;
-  coordsEl.innerHTML='AMENAZA EN TU POSICIÓN GPS'+(acc?' (precisión ±'+acc+' m)':'')+'<br>LAT/LON: '+ll.lat.toFixed(6)+', '+ll.lng.toFixed(6)+fmtCoords(ll);
+  updateCoords(ll);
+  coordsEl.textContent='Amenaza en tu posición GPS'+(acc?' (precisión ±'+acc+' m)':'')+'. Coordenadas detalladas en la sección 04.';
 }
 function gpsError(err){
   gpsBtn.classList.remove('on');
