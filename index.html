@@ -515,13 +515,13 @@ function refreshCoords(){
   list.forEach(t=>{
     h+='◆ AMENAZA '+(t.label||'')+' — '+dms(t.latlng)+'\n   '+desc()+' · '+wkg.toFixed(wkg<1?3:1)+' kg NEQ\n';
     pts.forEach(p=>{const d=distM(p[1],t.latlng),z=zoneState(d);
-      h+='   '+p[0]+' → amenaza: '+fmt(d)+(z?'  ⚠ '+z:'')+'\n';});
+      h+='   '+p[0]+' → amenaza: '+fmt(d)+(z?'  <span class="warn">⚠ '+z+'</span>':'')+'\n';});
   });
   if(pci)h+='◆ PCI — '+dms(pci.latlng)+'\n';
   if(pceod)h+='◆ PCEOD — '+dms(pceod.latlng)+'\n';
   if(!pci&&!pceod)h+='◆ PCI/PCEOD: sin colocar.\n';
   if(my)h+='◆ Tu posición GPS — '+dms([my.lat,my.lng])+'\n';
-  coordsBox.textContent=h;
+  coordsBox.innerHTML=h;
 }
 function update(){
   const{out}=radii();
