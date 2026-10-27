@@ -308,6 +308,8 @@ td.r{text-align:right;font-variant-numeric:tabular-nums}
     <button class="gpsBtn gray" id="btnDel" type="button" disabled>🗑 Borrar amenaza</button>
     <button class="gpsBtn gray" id="btnPci" type="button">🚩 Punto de control de incidente (PCI)</button>
     <button class="gpsBtn gray" id="btnEod" type="button">⛑ Punto de control EOD (PCEOD)</button>
+    <button class="gpsBtn gray" id="btnDelPci" type="button" disabled>🗑 Borrar PCI</button>
+    <button class="gpsBtn gray" id="btnDelEod" type="button" disabled>🗑 Borrar PCEOD</button>
     <div class="info" id="mapInfo">Toca «Posicionar en mapa amenaza» y luego toca el mapa. Podrás arrastrar el punto hasta pulsar «Fijar amenaza actual». PCI y PCEOD se colocan igual.</div>
   </div>
 
@@ -343,6 +345,7 @@ uM=document.getElementById('uM'),uI=document.getElementById('uI'),
 gpsBtn=document.getElementById('gpsBtn'),
 btnPlace=document.getElementById('btnPlace'),btnFix=document.getElementById('btnFix'),
 btnDel=document.getElementById('btnDel'),btnPci=document.getElementById('btnPci'),btnEod=document.getElementById('btnEod'),
+btnDelPci=document.getElementById('btnDelPci'),btnDelEod=document.getElementById('btnDelEod'),
 mapInfo=document.getElementById('mapInfo'),coordsBox=document.getElementById('coords'),
 logBox=document.getElementById('logBox'),pdfBtn=document.getElementById('pdfBtn'),pdfBox=document.getElementById('pdfBox');
 let mode='ied',units='metric',fragVal='1',wkg=1;
@@ -423,8 +426,8 @@ function setPoint(kind){
     const prev=kind==='pci'?pci:pceod;
     if(prev)prev.marker.remove();
     const m=L.marker(ll,{icon:tagIcon(kind==='pci'?'PCI':'EOD',kind==='pci'?'':'eod')}).addTo(map);
-    if(kind==='pci'){pci={latlng:ll,marker:m};log('PCI colocado — '+dms(ll));}
-    else{pceod={latlng:ll,marker:m};log('PCEOD colocado — '+dms(ll));}
+    if(kind==='pci'){pci={latlng:ll,marker:m};btnDelPci.disabled=false;log('PCI colocado — '+dms(ll));}
+    else{pceod={latlng:ll,marker:m};btnDelEod.disabled=false;log('PCEOD colocado — '+dms(ll));}
     mapInfo.textContent=(kind==='pci'?'PCI':'PCEOD')+' colocado. Toca de nuevo el botón para recolocarlo.';
     refreshCoords();
   };
@@ -432,6 +435,18 @@ function setPoint(kind){
 btnPlace.onclick=()=>{placing='threat';mapInfo.textContent='Toca el mapa para indicar la posición de la amenaza…';btnPlace.textContent='⌖ Toca el mapa…'};
 btnPci.onclick=()=>{placing='pci';mapInfo.textContent='Toca el mapa para colocar el PCI…'};
 btnEod.onclick=()=>{placing='eod';mapInfo.textContent='Toca el mapa para colocar el PCEOD…'};
+btnDelPci.onclick=()=>{
+  if(!pci){btnDelPci.disabled=true;return;}
+  if(!confirm('¿Eliminar el punto PCI del mapa?'))return;
+  pci.marker.remove();pci=null;btnDelPci.disabled=true;
+  mapInfo.textContent='PCI eliminado del mapa.';log('PCI borrado del mapa.');refreshCoords();
+};
+btnDelEod.onclick=()=>{
+  if(!pceod){btnDelEod.disabled=true;return;}
+  if(!confirm('¿Eliminar el punto PCEOD del mapa?'))return;
+  pceod.marker.remove();pceod=null;btnDelEod.disabled=true;
+  mapInfo.textContent='PCEOD eliminado del mapa.';log('PCEOD borrado del mapa.');refreshCoords();
+};
 map.on('click',e=>{
   if(!placing)return;
   if(placing==='threat'){setThreat([e.latlng.lat,e.latlng.lng]);log('Amenaza posicionada (sin fijar) — '+dms(active.latlng));}
@@ -504,6 +519,7 @@ function refreshCoords(){
   });
   if(pci)h+='◆ PCI — '+dms(pci.latlng)+'\n';
   if(pceod)h+='◆ PCEOD — '+dms(pceod.latlng)+'\n';
+  if(!pci&&!pceod)h+='◆ PCI/PCEOD: sin colocar.\n';
   if(my)h+='◆ Tu posición GPS — '+dms([my.lat,my.lng])+'\n';
   coordsBox.textContent=h;
 }
