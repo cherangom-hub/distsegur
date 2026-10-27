@@ -87,10 +87,27 @@ td.r{text-align:right;font-variant-numeric:tabular-nums}
       </select>
       <label for="exp">Tipo de explosivo supuesto</label>
       <select id="exp">
-        <option value="mil">TNT (militar)</option>
-        <option value="ani">Dinamita / ANFO (industrial)</option>
-        <option value="cas">Pólvora negra (casera)</option>
+        <optgroup label="Explosivos militares">
+          <option value="1">TNT — NEQ ×1,0</option>
+          <option value="1.6">RDX / Hexógeno — NEQ ×1,6</option>
+          <option value="1.7">Pentrita (PETN) — NEQ ×1,7</option>
+          <option value="1.85">Octógeno (HMX) — NEQ ×1,85</option>
+          <option value="1.6">C-4 (91 % RDX) — NEQ ×1,6</option>
+          <option value="1.35">Comp. B (RDX + TNT) — NEQ ×1,35</option>
+        </optgroup>
+        <optgroup label="Explosivos industriales">
+          <option value="0.9">Dinamita — NEQ ×0,9</option>
+          <option value="0.8">ANFO — NEQ ×0,8</option>
+          <option value="0.75">Emulsión / slurry — NEQ ×0,75</option>
+        </optgroup>
+        <optgroup label="Explosivos caseros (HME)">
+          <option value="0.85">TATP — NEQ ×0,85</option>
+          <option value="0.9">HMTD — NEQ ×0,9</option>
+          <option value="0.5">Pólvora negra — NEQ ×0,5</option>
+          <option value="0.6">Clorato + azúcar (HME) — NEQ ×0,6</option>
+        </optgroup>
       </select>
+      <div class="info" id="expInfo">NEQ por defecto: ×1,0 (TNT). El factor elegido multiplica el peso antes de calcular los radios.</div>
       <div class="info" id="uoInfo">Selecciona munición del catálogo: se fija NEQ (TNT eq.) y metralla automáticamente, con enlace de referencia visual para identificación.</div>
     </div>
 
@@ -282,7 +299,7 @@ td.r{text-align:right;font-variant-numeric:tabular-nums}
       <span><i class="dot" style="background:#FF9F0A"></i> Onda de choque — daño mínimo (K = 18)</span>
       <span><i class="dot" style="background:#FFD60A"></i> Fragmentación — personal al descubierto</span>
       <span><i class="dot dash" style="border:2px dashed #B9C4CC;background:transparent"></i> Daño estructural — círculos discontinuos (madera / ladrillo / hormigón)</span>
-      <span><i class="dot" style="background:#5B6B2F"></i> Tu posición (GPS en tiempo real)</span>
+      <span><i class="dot" style="background:#1D4E89"></i> Tu posición (GPS en tiempo real)</span>
       <span><i class="dot" style="background:var(--red);border-radius:2px"></i> Amenaza (roja) · <b style="color:var(--blue)">PCI</b> · <b style="color:var(--green)">EOD</b></span>
     </div>
     <label style="margin-top:12px">Control de amenaza y puntos</label>
@@ -338,7 +355,7 @@ const RANGES=[
  [2.9,'#5E7383','Daño estructural — hormigón (≈4–5 psi)',1]
 ];
 function Z(v){return v}
-function W(){return Math.max(.05,wkg*(mode==='ied'?(exp.value==='mil'?1:exp.value==='ani'?.85:.65):(document.getElementById('uo2').value.split('|')[1]==='1'?1:1)))}
+function W(){return Math.max(.05,wkg*(mode==='ied'?+exp.value:(document.getElementById('uo2').value.split('|')[1]==='1'?1:1)))}
 function frag(){return mode==='ied'?1:(document.getElementById('frag2').value==='1'?1:0)}
 function radii(){
   const w=W(),c=Math.cbrt(w),f=frag();
@@ -369,13 +386,14 @@ document.getElementById('refBtn').onclick=()=>{
   else document.getElementById('uxoInfo').innerHTML='Sin ficha de referencia disponible para esta munición.';
 };
 document.getElementById('cont').onchange=()=>{const v=cont.value.split('|');wkg=+v[0];fragVal=v[1];syncKg();update()};
+document.getElementById('exp').onchange=()=>{document.getElementById('expInfo').innerHTML='Factor NEQ aplicado: <b style="color:var(--ink)">'+exp.selectedOptions[0].text+'</b>. Radios calculados con el equivalente TNT.';update()};
 /* ---- Mapa ---- */
 const map=L.map('map').setView([40.4168,-3.7038],12);
 const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,crossOrigin:'anonymous',attribution:'© Colaboradores de OpenStreetMap'});
 const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,crossOrigin:'anonymous',attribution:'Esri, Maxar, Earthstar Geographics'});
 osm.addTo(map);
 L.control.layers({'🗺 Mapa':osm,'🛰 Satélite':sat},null,{position:'topleft'}).addTo(map);
-const personIcon=L.divIcon({className:'',html:'<svg width="22" height="30" viewBox="0 0 22 30"><circle cx="11" cy="5.5" r="4.2" fill="#5B6B2F"/><path d="M11 10.5 C6.5 10.5 5.5 15 5.5 19.5 L9 19.5 L9 29 L13 29 L13 19.5 L16.5 19.5 C16.5 15 15.5 10.5 11 10.5" fill="#5B6B2F"/></svg>',iconSize:[22,30],iconAnchor:[11,29]});
+const personIcon=L.divIcon({className:'',html:'<svg width="22" height="30" viewBox="0 0 22 30"><circle cx="11" cy="5.5" r="4.2" fill="#1D4E89"/><path d="M11 10.5 C6.5 10.5 5.5 15 5.5 19.5 L9 19.5 L9 29 L13 29 L13 19.5 L16.5 19.5 C16.5 15 15.5 10.5 11 10.5" fill="#1D4E89"/></svg>',iconSize:[22,30],iconAnchor:[11,29]});
 const threatIcon=L.divIcon({className:'',html:'<div style="width:20px;height:20px;background:var(--red);border:2px solid #fff;border-radius:4px;box-shadow:0 0 10px rgba(255,59,48,.8)"></div>',iconSize:[20,20],iconAnchor:[10,10]});
 function tagIcon(txt,cls){return L.divIcon({className:'',html:'<div class="tagIco '+(cls||'')+'">'+txt+'</div>',iconSize:[52,24],iconAnchor:[26,12]})}
 let uMarker=null,threats=[],active=null,pci=null,pceod=null,placing=null,watchId=null;
@@ -464,14 +482,25 @@ function desc(){
   if(mode==='ied')return cont.selectedOptions[0].text+' · '+exp.selectedOptions[0].text;
   return document.getElementById('uo2').selectedOptions[0].text;
 }
+function zoneState(d){
+  const out=radii().out;
+  const rL=out.find(r=>r.lbl.indexOf('letal')>=0).r,
+        rO=out.find(r=>r.lbl.indexOf('daño mínimo')>=0).r,
+        rF=out.find(r=>r.lbl.indexOf('Fragmentación')>=0).r;
+  return d<rL?'¡DENTRO DE ZONA LETAL!':d<rO?'DENTRO DE ZONA DE ONDA DE CHOQUE':(frag()&&d<rF)?'DENTRO DE ZONA DE FRAGMENTACIÓN':null;
+}
 function refreshCoords(){
   let h='',my=userLL();
   const list=[...threats];if(active)list.push(active);
   if(!list.length&&!pci&&!pceod){coordsBox.textContent='Sin amenazas colocadas todavía.';return;}
+  const pts=[];
+  if(my)pts.push(['GPS (tiempo real)',my]);
+  if(pci)pts.push(['PCI',pci.latlng]);
+  if(pceod)pts.push(['PCEOD',pceod.latlng]);
   list.forEach(t=>{
     h+='◆ AMENAZA '+(t.label||'')+' — '+dms(t.latlng)+'\n   '+desc()+' · '+wkg.toFixed(wkg<1?3:1)+' kg NEQ\n';
-    if(my){const d=distM(my,t.latlng),rr=radii().out[0].r;
-      h+='   Distancia a tu posición: '+fmt(d)+(d<rr?'  ⚠ ¡DENTRO DE ZONA LETAL!':d<radii().out[1].r?'  ⚠ Dentro de zona de daño mínimo':'')+'\n';}
+    pts.forEach(p=>{const d=distM(p[1],t.latlng),z=zoneState(d);
+      h+='   '+p[0]+' → amenaza: '+fmt(d)+(z?'  ⚠ '+z:'')+'\n';});
   });
   if(pci)h+='◆ PCI — '+dms(pci.latlng)+'\n';
   if(pceod)h+='◆ PCEOD — '+dms(pceod.latlng)+'\n';
@@ -531,7 +560,9 @@ pdfBtn.onclick=async()=>{
   y+=2;line('4. Exposición',14);
   if(!my)line('GPS no activado — sin posición propia.',9);
   else{line('· Posición GPS: '+dms([my.lat,my.lng]),9);
-    list.forEach(t=>{const d=distM(my,t.latlng);line('· Distancia a '+(t.label||'amenaza')+': '+fmt(d)+(d<radii().out[0].r?'  ¡ZONA LETAL!':''),9);});}
+    list.forEach(t=>{const d=distM(my,t.latlng);line('· Distancia a '+(t.label||'amenaza')+': '+fmt(d)+(zoneState(d)?'  '+zoneState(d):''),9);});}
+  if(pci){list.forEach(t=>{const d=distM(pci.latlng,t.latlng);line('· PCI → '+(t.label||'amenaza')+': '+fmt(d)+(zoneState(d)?'  '+zoneState(d):''),9);});}
+  if(pceod){list.forEach(t=>{const d=distM(pceod.latlng,t.latlng);line('· PCEOD → '+(t.label||'amenaza')+': '+fmt(d)+(zoneState(d)?'  '+zoneState(d):''),9);});}
   y+=2;line('5. Registro de incidentes',14);
   if(!logItems.length)line('Sin incidentes registrados.',9);
   else logItems.slice(0,20).forEach(it=>line('· ['+it.t+'] '+it.txt,9));
