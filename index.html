@@ -319,10 +319,35 @@ td .l{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7
     <div class="panel" style="margin-top:16px">
       <h2>04 · Coordenadas del punto de amenaza</h2>
       <div id="coordsBox" class="coordBox">Coloca la amenaza en el mapa (GPS o toque manual) para ver aquí sus coordenadas en LAT/LON, UTM y MGRS.</div>
+      <label style="margin-top:14px">Exposición del interviniente</label>
+      <button class="gpsBtn" id="myBtn" type="button" style="background:var(--blue)">📍 Marcar mi posición</button>
+      <div id="expBox" class="coordBox" style="margin-top:10px">Pulsa «Marcar mi posición» para comprobar si estás dentro o fuera del perímetro de peligro.</div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h2>05 · Registro de incidentes</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="gpsBtn" id="saveBtn" type="button" style="margin-top:0">💾 Guardar incidente</button>
+        <button class="gpsBtn" id="copyBtn" type="button" style="margin-top:0;background:var(--panel);color:var(--ink);border:1px solid var(--line)">⧉ Copiar todo</button>
+      </div>
+      <div id="logBox" class="coordBox" style="margin-top:10px;line-height:1.8">Sin incidentes guardados todavía en esta sesión.</div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h2>06 · Comparador de amenazas</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="gpsBtn" id="cmpSaveBtn" type="button" style="margin-top:0;background:var(--red);color:#fff">✚ Fijar amenaza actual</button>
+        <button class="gpsBtn" id="cmpClearBtn" type="button" style="margin-top:0;background:var(--panel);color:var(--ink);border:1px solid var(--line)">🗑 Vaciar comparador</button>
+      </div>
+      <div id="cmpBox" class="coordBox" style="margin-top:10px;line-height:1.8">Fija varias amenazas para ver sus perímetros juntos en el mapa. La amenaza activa (punto rojo) sigue siendo editable.</div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h2>07 · Informe Word</h2>
+      <button class="gpsBtn" id="docBtn" type="button" style="background:var(--blue)">📄 Generar informe (Word) con captura del mapa</button>
+      <div id="docBox" class="coordBox" style="margin-top:10px">Genera un documento Word descargable con la ficha de la amenaza, coordenadas, tabla de radios, tu exposición, el comparador, el registro de incidentes y una captura del mapa.</div>
     </div>
   </div>
 </div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 const cont=document.getElementById('cont'),exp=document.getElementById('exp'),
@@ -333,6 +358,10 @@ mIed=document.getElementById('mIed'),mUxo=document.getElementById('mUxo'),
 weffEl=document.getElementById('weff'),tb=document.querySelector('#tbl tbody'),
 uToggle=document.getElementById('uToggle'),gpsBtn=document.getElementById('gpsBtn'),
 btnGPS=document.getElementById('btnGPS'),btnMan=document.getElementById('btnMan'),
+myBtn=document.getElementById('myBtn'),expBox=document.getElementById('expBox'),
+saveBtn=document.getElementById('saveBtn'),copyBtn=document.getElementById('copyBtn'),logBox=document.getElementById('logBox'),
+cmpSaveBtn=document.getElementById('cmpSaveBtn'),cmpClearBtn=document.getElementById('cmpClearBtn'),cmpBox=document.getElementById('cmpBox'),
+docBtn=document.getElementById('docBtn'),docBox=document.getElementById('docBox'),
 coordsEl=document.getElementById('coords');
 let mode='ied', units='metric', fragVal='1';
 let wkg=1;const LB=2.20462;
@@ -363,7 +392,7 @@ function fmt(m){return units==='metric'?(m>=1000?(m/1000).toFixed(2)+' km':Math.
 /* ---- Mapa Leaflet ---- */
 const TH=['https://tile.','openstreetmap.org/{z}/{x}/{y}.png'];
 const map=L.map('map',{zoomControl:true}).setView([40.4168,-3.7038],13);
-L.tileLayer(TH.join(''),{maxZoom:19,attribution:'© Colaboradores de OpenStreetMap'}).addTo(map);
+L.tileLayer(TH.join(''),{maxZoom:19,crossOrigin:'anonymous',attribution:'© Colaboradores de OpenStreetMap'}).addTo(map);
 L.control.scale({imperial:false,metric:true}).addTo(map);
 let marker=null,circles=[];
 const threatIcon=L.divIcon({className:'',html:'<div style="width:16px;height:16px;border-radius:50%;background:#FF3B30;border:2px solid #fff;box-shadow:0 0 0 2px #FF3B3055"></div>',iconSize:[16,16],iconAnchor:[8,8]});
@@ -379,6 +408,148 @@ function refresh(){
   }
   weffEl.textContent='W = '+(units==='metric'?w.toFixed(3)+' kg':(w*LB).toFixed(2)+' lb')+' TNT eq · K = '+(units==='metric'?'15,4 m/kg^⅓':'38,8 ft/lb^⅓');
   tb.innerHTML=out.map(o=>'<tr><td><span class="l" style="background:'+o.col+'"></span>'+o.lbl+'</td><td class="num">'+fmt(o.r)+'</td></tr>').join('');
+  checkExposure();
+}
+
+/* ---- Exposición del interviniente ---- */
+let userLL=null,uMarker=null,uCircle=null;
+function checkExposure(){
+  if(!uMarker||!marker){
+    if(uCircle){map.removeLayer(uCircle);uCircle=null;}
+    if(uMarker)expBox.innerHTML='<div style="color:#7C8B96">Tu posición está marcada. Falta colocar la amenaza en el mapa.</div>';
+    return;
+  }
+  const {out}=radii();
+  const rLet=out.filter(o=>o.lbl.indexOf('letal')>-1)[0],rFrag=out.filter(o=>o.lbl.indexOf('Fragmentación')>-1)[0],rCris=out.filter(o=>o.lbl.indexOf('cristales')>-1)[0],rEstr=out.filter(o=>o.sec)[0];
+  const d=map.distance(uMarker.getLatLng(),marker.getLatLng());
+  if(uCircle){map.removeLayer(uCircle);uCircle=null;}
+  let head,cls,col;
+  if(d<=rLet.r){col='#FF3B30';head='⚠ DENTRO DEL RADIO LETAL — ALEJARSE INMEDIATAMENTE';}
+  else if(d<=rFrag.r){col='#FF9F0A';head='⚠ DENTRO DE FRAGMENTACIÓN — BUSCAR CUBIERTA';}
+  else if(d<=Math.max(rCris.r,rEstr?rEstr.r:0)){col='#FFD60A';head='DENTRO DE LA ZONA DE DESALOJO';}
+  else{col='#30D158';head='FUERA DEL PERÍMETRO DE PELIGRO';}
+  const inZ=(r)=>d<=r?'<span style="color:'+col+'">●</span>':'<span style="color:#3A4650">○</span>';
+  expBox.innerHTML='<div style="color:'+col+';font-weight:600;letter-spacing:.04em">'+head+'</div>'+
+    '<div style="margin-top:6px"><b>DISTANCIA</b> '+fmt(d)+' a la amenaza</div>'+
+    '<div><b>ESTADO</b> '+inZ(rLet.r)+' letal · '+inZ(rFrag.r)+' metralla · '+inZ(rCris.r)+' cristales'+(rEstr?' · '+inZ(rEstr.r):'')+' estructural</div>';
+  uCircle=L.circle(uMarker.getLatLng(),{radius:d,color:col,weight:1,dashArray:'2 6',fill:false,interactive:false}).addTo(map);
+  if(savedThreats.length)renderCompare();
+}
+function setMyPos(ll){
+  userLL=ll;
+  if(!uMarker)uMarker=L.circleMarker(ll,{radius:7,color:'#30D158',weight:3,fillColor:'#30D158',fillOpacity:.95}).addTo(map).bindTooltip('Tu posición');
+  else uMarker.setLatLng(ll);
+  checkExposure();
+}
+myBtn.addEventListener('click',()=>{
+  if(!('geolocation' in navigator)){expBox.textContent='Este navegador no soporta geolocalización.';return;}
+  expBox.textContent='Localizando tu posición…';
+  navigator.geolocation.getCurrentPosition(p=>{setMyPos([p.coords.latitude,p.coords.longitude]);map.panTo(uMarker.getLatLng());},()=>{expBox.textContent='No se pudo obtener tu GPS. Inténtalo en exteriores o concede permiso de ubicación.';},{enableHighAccuracy:true,timeout:8000,maximumAge:5000});
+});
+
+/* ---- Registro de incidentes ---- */
+let incidentLog=[];
+function threatDesc(){
+  return mode==='ied'
+    ?cont.selectedOptions[0].text+' · '+(exp.value==='mil'?expMil.selectedOptions[0].text:exp.selectedOptions[0].text)+(frag.value==='1'?' · CON metralla':' · SIN metralla')
+    :uo.selectedOptions[0].text;
+}
+saveBtn.addEventListener('click',()=>{
+  if(!marker){logBox.innerHTML='<div style="color:#FF9F0A">Coloca primero la amenaza en el mapa.</div>';return;}
+  const {out}=radii();
+  const rLet=out.filter(o=>o.lbl.indexOf('letal')>-1)[0],rFrag=out.filter(o=>o.lbl.indexOf('Fragmentación')>-1)[0];
+  const ll=marker.getLatLng(),u=toUTM(ll.lat,ll.lng);
+  incidentLog.unshift({hora:new Date().toLocaleString('es-ES'),amenaza:threatDesc(),w:W().toFixed(3),mgrs:u.mgrs,latlon:ll.lat.toFixed(6)+', '+ll.lng.toFixed(6),rlet:fmt(rLet.r),rfrag:fmt(rFrag.r)});
+  if(incidentLog.length>20)incidentLog.pop();
+  renderLog();
+});
+copyBtn.addEventListener('click',()=>{
+  if(!incidentLog.length){logBox.innerHTML='<div style="color:#7C8B96">No hay incidentes que copiar.</div>';return;}
+  const txt=incidentLog.map((e,i)=>'INCIDENTE #'+(incidentLog.length-i)+' — '+e.hora+'\n  Amenaza: '+e.amenaza+'\n  W: '+e.w+' kg TNT eq\n  MGRS: '+e.mgrs+'\n  Lat/Lon: '+e.latlon+'\n  Radio letal: '+e.rlet+' · Radio metralla: '+e.rfrag).join('\n\n');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(()=>{logBox.innerHTML='<div style="color:#30D158">Registro copiado al portapapeles — pégalo en el parte o mensajería.</div>';},()=>{logBox.textContent=txt;});}
+  else logBox.textContent=txt;
+});
+function renderLog(){
+  logBox.innerHTML=incidentLog.length?'<div style="color:#7C8B96">'+incidentLog.length+' incidente(s) en esta sesión</div>'+incidentLog.map((e,i)=>'<div style="border-top:1px solid var(--line);margin-top:6px;padding-top:6px"><div><b>#'+(incidentLog.length-i)+'</b> '+e.hora+'</div><div><b>AMENAZA</b> '+e.amenaza+'</div><div><b>W</b> '+e.w+' kg TNT eq</div><div><b>MGRS</b> '+e.mgrs+'</div><div><b>RADIOS</b> letal '+e.rlet+' · metralla '+e.rfrag+'</div></div>').join(''):'Sin incidentes guardados todavía en esta sesión.';
+}
+
+/* ---- Informe Word ---- */
+docBtn.addEventListener('click',()=>{
+  docBox.innerHTML='Capturando el mapa y generando el informe…';
+  const finish=(imgData)=>{
+    const ll=marker?marker.getLatLng():null,u=ll?toUTM(ll.lat,ll.lng):null;
+    const {out,w}=radii();
+    const rLet=out.filter(o=>o.lbl.indexOf('letal')>-1)[0],rFrag=out.filter(o=>o.lbl.indexOf('Fragmentación')>-1)[0];
+    let h='<html xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>body{font-family:Consolas,monospace;font-size:10.5pt}h1{font-size:16pt;text-transform:uppercase}h2{font-size:12pt;text-transform:uppercase;border-bottom:1px solid #999;padding-bottom:2px;margin-top:14pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4pt 6pt;font-size:10pt}th{background:#eee;text-align:left}.r{text-align:right}</style></head><body>';
+    h+='<h1>PERIMETER — Informe de distancia de seguridad</h1>';
+    h+='<p><b>Fecha:</b> '+new Date().toLocaleString('es-ES')+'</p>';
+    h+='<h2>1. Amenaza</h2><table><tr><th>Descripción</th><td>'+(marker?threatDesc():'—')+'</td></tr><tr><th>Carga TNT equivalente</th><td>'+w.toFixed(3)+' kg</td></tr>'+(ll?'<tr><th>LAT/LON</th><td>'+ll.lat.toFixed(6)+', '+ll.lng.toFixed(6)+'</td></tr><tr><th>UTM</th><td>'+u.zone+u.band+' · E '+u.x+' m · N '+u.y+' m</td></tr><tr><th>MGRS</th><td>'+u.mgrs+'</td></tr>':'<tr><th>Posición</th><td>Amenaza sin colocar</td></tr>')+'</table>';
+    h+='<h2>2. Radios de seguridad</h2><table><tr><th>Efecto</th><th class="r">Radio</th></tr>'+out.map(o=>'<tr><td>'+o.lbl+'</td><td class="r">'+fmt(o.r)+'</td></tr>').join('')+'</table>';
+    if(uMarker&&marker){
+      const d=map.distance(uMarker.getLatLng(),marker.getLatLng());
+      let est=d<=rLet.r?'DENTRO DEL RADIO LETAL':d<=rFrag.r?'DENTRO DE FRAGMENTACIÓN':'FUERA DE PELIGRO';
+      h+='<h2>3. Exposición del interviniente</h2><p><b>Distancia a la amenaza:</b> '+fmt(d)+' — <b>'+est+'</b></p>';
+    }
+    if(savedThreats.length){
+      h+='<h2>4. Comparador de amenazas</h2><table><tr><th>ID</th><th>Descripción</th><th>W (kg)</th><th>MGRS</th><th>Letal</th><th>Metralla</th></tr>'+savedThreats.map(t=>{let ex='';if(uMarker){const d=map.distance(uMarker.getLatLng(),t.ll);ex=exposureFor(d,t)[1];}return '<tr><td>'+t.letter+'</td><td>'+t.desc+'</td><td class="r">'+t.w+'</td><td>'+t.mgrs+'</td><td class="r">'+fmt(t.rlet)+(ex?' · '+ex:'')+'</td><td class="r">'+fmt(t.rfrag)+'</td></tr>';}).join('')+'</table>';
+    }
+    if(incidentLog.length){
+      h+='<h2>5. Registro de incidentes</h2>'+incidentLog.map((e,i)=>'<p><b>#'+(incidentLog.length-i)+' — '+e.hora+'</b><br>Amenaza: '+e.amenaza+'<br>W: '+e.w+' kg TNT eq<br>MGRS: '+e.mgrs+'<br>Lat/Lon: '+e.latlon+'<br>Radio letal: '+e.rlet+' · Radio metralla: '+e.rfrag+'</p>').join('');
+    }
+    h+='<h2>'+(incidentLog.length?'6':'5')+'. Captura del mapa</h2>'+(imgData?'<img src="'+imgData+'" style="width:620px">':'<p>No se pudo capturar el mapa.</p>');
+    h+='<p style="margin-top:16pt;font-size:9pt;color:#666">Documento orientativo generado con PERIMETER. Radios calculados con distancias escaladas Z (K = 15,4 m/kg^⅓) sobre la carga TNT equivalente. No sustituye a los procedimientos del servicio.</p></body></html>';
+    const blob=new Blob(['\ufeff',h],{type:'application/msword'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='informe_perimetro_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.doc';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    docBox.innerHTML='<div style="color:#30D158">Informe descargado (.doc). Ábrelo con Word, LibreOffice o Google Docs.</div>';
+  };
+  if(marker&&window.html2canvas){
+    html2canvas(document.getElementById('map'),{useCORS:true,logging:false}).then(c=>finish(c.toDataURL('image/png'))).catch(()=>finish(null));
+  } else finish(null);
+});
+
+/* ---- Comparador de amenazas ---- */
+let savedThreats=[];
+const cmpIcon=(l)=>L.divIcon({className:'',html:'<div style="width:20px;height:20px;border-radius:4px;background:#FF9F0A;border:2px solid #fff;color:#06121C;font:700 12px Saira Condensed,sans-serif;display:flex;align-items:center;justify-content:center">'+l+'</div>',iconSize:[20,20],iconAnchor:[10,10]});
+cmpSaveBtn.addEventListener('click',()=>{
+  if(!marker){cmpBox.innerHTML='<div style="color:#FF9F0A">Coloca primero la amenaza en el mapa.</div>';return;}
+  if(savedThreats.length>=8){cmpBox.innerHTML='<div style="color:#FF9F0A">Máximo 8 amenazas fijadas. Vacía el comparador para continuar.</div>';return;}
+  const {out}=radii();
+  const rLet=out.filter(o=>o.lbl.indexOf('letal')>-1)[0],rFrag=out.filter(o=>o.lbl.indexOf('Fragmentación')>-1)[0],rCris=out.filter(o=>o.lbl.indexOf('cristales')>-1)[0];
+  const ll=marker.getLatLng(),u=toUTM(ll.lat,ll.lng),letter=String.fromCharCode(65+savedThreats.length);
+  const layers=[];
+  out.forEach(o=>{
+    const c=L.circle(ll,{radius:Math.max(o.r,1),color:o.col,weight:1,dashArray:o.sec?'4 8':'2 6',fillColor:o.col,fillOpacity:.02,interactive:false}).addTo(map);
+    layers.push(c);
+  });
+  layers.push(L.marker(ll,{icon:cmpIcon(letter)}).addTo(map));
+  savedThreats.push({letter,ll,layers,desc:threatDesc(),w:W().toFixed(3),mgrs:u.mgrs,rlet:rLet.r,rfrag:rFrag.r,rcris:rCris.r});
+  renderCompare();
+});
+cmpClearBtn.addEventListener('click',()=>{savedThreats.forEach(t=>t.layers.forEach(l=>map.removeLayer(l)));savedThreats=[];renderCompare();});
+cmpBox.addEventListener('click',e=>{
+  const b=e.target.closest('button[data-rm]');if(!b)return;
+  const i=+b.getAttribute('data-rm'),t=savedThreats[i];
+  if(t)t.layers.forEach(l=>map.removeLayer(l));
+  savedThreats.splice(i,1);
+  savedThreats.forEach((t2,j)=>t2.layers[t2.layers.length-1].setIcon(cmpIcon(String.fromCharCode(65+j))));
+  renderCompare();
+});
+function exposureFor(d,t){
+  if(d<=t.rlet)return['#FF3B30','DENTRO DEL RADIO LETAL'];
+  if(d<=t.rfrag)return['#FF9F0A','DENTRO DE FRAGMENTACIÓN'];
+  if(d<=t.rcris)return['#FFD60A','DENTRO DE DESALOJO'];
+  return['#30D158','FUERA DE PELIGRO'];
+}
+function renderCompare(){
+  if(!savedThreats.length){cmpBox.innerHTML='Fija varias amenazas para ver sus perímetros juntos en el mapa. La amenaza activa (punto rojo) sigue siendo editable.';return;}
+  cmpBox.innerHTML='<div style="color:#7C8B96">'+savedThreats.length+' amenaza(s) fijada(s) en el mapa</div>'+savedThreats.map((t,i)=>{
+    let line='';
+    if(uMarker){
+      const d=map.distance(uMarker.getLatLng(),t.ll),st=exposureFor(d,t);
+      line='<div><b>TU POSICIÓN</b> '+fmt(d)+' — <span style="color:'+st[0]+';font-weight:600">'+st[1]+'</span></div>';
+    }
+    return '<div style="border-top:1px solid var(--line);margin-top:6px;padding-top:6px"><div><b>'+t.letter+'</b> '+t.desc+'</div><div><b>W</b> '+t.w+' kg TNT eq · <b style="min-width:0">MGRS</b> '+t.mgrs+'</div><div><b>RADIOS</b> letal '+fmt(t.rlet)+' · metralla '+fmt(t.rfrag)+'</div>'+line+'<button data-rm="'+i+'" style="margin-top:4px;background:#0D1319;border:1px solid var(--line);border-radius:5px;color:#FF3B30;font:inherit;font-size:11px;padding:6px 10px;cursor:pointer">✕ Quitar amenaza '+t.letter+'</button></div>';
+  }).join('');
 }
 map.on('click',e=>{setOrigin(false);placeThreat(e.latlng);});
 function placeThreat(ll){
