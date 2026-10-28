@@ -339,6 +339,26 @@ td.r{text-align:right;font-variant-numeric:tabular-nums}
     <div class="info" id="pdfBox">El PDF incluye: amenazas con coordenadas y NEQ, tabla de radios, PCI, PCEOD, tu exposición, registro de incidentes e imagen insertada de la captura del mapa.</div>
   </div>
 
+  <div class="panel">
+    <h2>07 · Instrucciones de empleo</h2>
+    <button class="gpsBtn gray" id="helpBtn" type="button">📖 Ver instrucciones de empleo</button>
+    <div id="helpBox" class="coordBox" style="display:none">
+<b>1 · Amenaza</b> — Elige IED (contenedor + explosivo supuesto + peso en kg TNT eq.) o UXO (catálogo de municiones; NEQ y metralla se fijan solos). Botón «Ver ficha e imagen» abre la referencia visual.
+
+<b>2 · Distancias</b> — Tabla de radios con distancias escaladas Z (K = 15,4 m/kg^⅓; daño mínimo K = 18): onda de choque letal y daño mínimo, daño estructural (madera/ladrillo/hormigón), fragmentación y zona de exclusión por cristales. Unidades kg·m / lb·ft conmutables.
+
+<b>3 · Mapa</b> — Activa tu GPS, pulsa «Posicionar en mapa amenaza» y toca el mapa; arrastra el punto y confirma con «Fijar amenaza actual» (o bórrala). PCI y PCEOD se colocan igual.
+
+<b>4 · Coordenadas y exposición</b> — Coordenadas de amenazas, PCI y PCEOD; tu distancia a cada amenaza y si estás dentro de algún radio.
+
+<b>5 · Registro</b> — Cada amenaza fijada se anota con hora, coordenadas y munición. Editable y borrable línea a línea.
+
+<b>6 · Informe</b> — «Generar informe PDF» crea el informe con captura del mapa, amenazas, radios, puntos de control y registro.
+
+⚠️ Herramienta de apoyo orientativo para personal formado en EOD; no sustituye los SOP ni la evaluación de un especialista cualificado.
+    </div>
+  </div>
+
 </div>
 </div>
 </div>
@@ -357,7 +377,9 @@ btnPlace=document.getElementById('btnPlace'),btnFix=document.getElementById('btn
 btnDel=document.getElementById('btnDel'),btnPci=document.getElementById('btnPci'),btnEod=document.getElementById('btnEod'),
 btnDelPci=document.getElementById('btnDelPci'),btnDelEod=document.getElementById('btnDelEod'),
 mapInfo=document.getElementById('mapInfo'),coordsBox=document.getElementById('coords'),
-logBox=document.getElementById('logBox'),pdfBtn=document.getElementById('pdfBtn'),pdfBox=document.getElementById('pdfBox');
+logBox=document.getElementById('logBox'),pdfBtn=document.getElementById('pdfBtn'),pdfBox=document.getElementById('pdfBox'),
+helpBtn=document.getElementById('helpBtn'),helpBox=document.getElementById('helpBox');
+if(helpBtn){helpBtn.onclick=()=>{const open=helpBox.style.display==='none';helpBox.style.display=open?'':'none';helpBtn.textContent=open?'📕 Ocultar instrucciones de empleo':'📖 Ver instrucciones de empleo';if(open)helpBox.scrollIntoView({behavior:'smooth',block:'nearest'});};}
 let mode='ied',units='metric',fragVal='1',wkg=1;
 const LB=2.20462,IMP=2.52;
 const RANGES=[
