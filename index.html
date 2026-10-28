@@ -45,7 +45,7 @@ td.r{text-align:right;font-variant-numeric:tabular-nums}
 .legend i.dot{width:12px;height:12px}
 .tagIco{background:#0D1319;border:2px solid var(--blue);color:var(--blue);font-family:'Saira Condensed';font-weight:800;font-size:12px;letter-spacing:.05em;border-radius:5px;padding:2px 6px;white-space:nowrap}
 .tagIco.eod{border-color:var(--green);color:var(--green)}
-.tagIco.thr{border-color:var(--red);color:var(--red)}
+.tagIco.thr{background:none;border:0;color:var(--red);text-shadow:0 0 4px rgba(11,15,18,.9),0 0 2px rgba(11,15,18,.9)}
 .lio{display:flex;gap:8px;align-items:flex-start;font-size:12px;border-bottom:1px dashed var(--line);padding:7px 0;line-height:1.55}
 .lio .x{margin-left:auto;background:none;border:1px solid var(--line);border-radius:5px;color:var(--red);cursor:pointer;font-family:inherit;min-width:34px;min-height:30px}
 .src{font-size:10px;color:var(--dim)}
@@ -75,6 +75,7 @@ td.r{text-align:right;font-variant-numeric:tabular-nums}
       <div class="info">Define el contenedor/ocultación y el tipo de explosivo supuesto. La NEQ (TNT equivalente) se ajusta automáticamente según ambos.</div>
       <label for="cont">Contenedor / ocultación</label>
       <select id="cont">
+        <option value="" disabled selected>Seleccionar contenedor / ocultación…</option>
         <option value="0.05|0.5|Carta postal">Carta postal</option>
         <option value="1|0.6|Paquete postal">Paquete postal</option>
         <option value="1|0.6|Mochila / bolso pequeño">Mochila / bolso pequeño</option>
@@ -110,11 +111,18 @@ td.r{text-align:right;font-variant-numeric:tabular-nums}
       </select>
       <div class="info" id="expInfo">NEQ por defecto: ×1,0 (TNT). El factor elegido multiplica el peso antes de calcular los radios.</div>
       <div class="info" id="uoInfo">Selecciona munición del catálogo: se fija NEQ (TNT eq.) y metralla automáticamente, con enlace de referencia visual para identificación.</div>
+      <script>(function(){window.addEventListener('load',function(){var s=document.getElementById('uo2');var g=s&&s.querySelector('optgroup[label="Drones / UAS kamikaze"]');if(g)s.appendChild(g);});})();</script>
     </div>
 
     <div id="uxoSec" style="display:none">
       <label for="uo2">Munición sin explotar (UXO)</label>
       <select id="uo2">
+        <option value="" disabled selected>Seleccionar munición…</option>
+        <optgroup label="Drones / UAS kamikaze">
+          <option value="3|1|Lancet-3 (RUS) ~3 kg NEQ|https://en.wikipedia.org/wiki/Lancet_(drone)">Lancet-3 — ~3 kg NEQ</option>
+          <option value="15|1|Shahed-131 (IRN/RUS) ~15 kg NEQ|https://en.wikipedia.org/wiki/Shahed-131">Shahed-131 — ~15 kg NEQ</option>
+          <option value="40|1|Shahed-136 / Geran-2 (IRN/RUS) ~40 kg NEQ|https://en.wikipedia.org/wiki/Shahed-136">Shahed-136 / Geran-2 — ~40 kg NEQ</option>
+        </optgroup>
         <optgroup label="Granadas de mano — Rusia / URSS">
           <option value="0.11|1|RGD-5 (RUS) 110 g|https://en.wikipedia.org/wiki/RGD-5">RGD-5 — 110 g NEQ</option>
           <option value="0.06|1|F-1 (RUS) 60 g|https://en.wikipedia.org/wiki/F-1_(grenade)">F-1 — 60 g NEQ</option>
@@ -299,6 +307,7 @@ td.r{text-align:right;font-variant-numeric:tabular-nums}
       <span><i class="dot" style="background:#FF3B30"></i> Onda de choque — letal (≈35 kPa)</span>
       <span><i class="dot" style="background:#FF9F0A"></i> Onda de choque — daño mínimo (K = 18)</span>
       <span><i class="dot" style="background:#FFD60A"></i> Fragmentación — personal al descubierto</span>
+      <span><i class="dot" style="background:#30D158"></i> Zona de exclusión / desalojo — rotura de cristales</span>
       <span><i class="dot dash" style="border:2px dashed #B9C4CC;background:transparent"></i> Daño estructural — círculos discontinuos (madera / ladrillo / hormigón)</span>
       <span><i class="dot" style="background:#1D4E89"></i> Tu posición (GPS en tiempo real)</span>
       <span><i class="dot" style="background:var(--red);border-radius:2px"></i> Amenaza (roja) · <b style="color:var(--blue)">PCI</b> · <b style="color:var(--green)">EOD</b></span>
@@ -365,10 +374,8 @@ function radii(){
   const w=W(),c=Math.cbrt(w),f=frag();
   let out=RANGES.map(r=>({col:r[1],lbl:r[2],r:r[0]*c,sec:!!r[3]}));
   const rf=f===1?140*c:Math.max(out[0].r,6*c);
-  out.splice(2,0,{col:'#FFD60A',lbl:'Fragmentación — personal al descubierto',r:rf,sec:false});
-  out.push({col:'#30D158',lbl:'Zona de exclusión / desalojo — rotura de cristales',r:45*c,sec:false});
-  out.sort((a,b)=>b.r-a.r);
-  return{out,w};
+  out.splice(2,0,{col:'#FFD60A',lbl:'Fragmentación — personal al descubierto',r:rf,sec:false},{col:'#30D158',lbl:'Zona de exclusión / desalojo — rotura de cristales',r:45*c,sec:false});
+  return{out,w,draw:[...out].sort((a,b)=>b.r-a.r)};
 }
 function fmt(m){return units==='metric'?(m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m'):Math.round(m*3.28084)+' ft'}
 function syncKg(){kg.value=units==='metric'?(+wkg).toFixed(3):(wkg*LB).toFixed(2)}
@@ -379,6 +386,7 @@ uM.onclick=()=>{if(units==='metric')return;units='metric';uM.classList.add('on')
 uI.onclick=()=>{if(units==='imperial')return;units='imperial';uI.classList.add('on');uM.classList.remove('on');document.getElementById('thM').textContent='Distance';syncKg();update()};
 kg.oninput=()=>{wkg=units==='metric'?Math.max(.01,+kg.value||1):Math.max(.01,(+kg.value||1)/LB);update()};
 document.getElementById('uo2').onchange=()=>{
+  if(!document.getElementById('uo2').value)return;
   const v=document.getElementById('uo2').value.split('|');
   wkg=+v[0];document.getElementById('frag2').value=v[1];
   syncKg();update();
@@ -389,7 +397,7 @@ document.getElementById('refBtn').onclick=()=>{
   if(v[3])window.open(v[3],'_blank');
   else document.getElementById('uxoInfo').innerHTML='Sin ficha de referencia disponible para esta munición.';
 };
-document.getElementById('cont').onchange=()=>{const v=cont.value.split('|');wkg=+v[0];fragVal=v[1];syncKg();update()};
+document.getElementById('cont').onchange=()=>{if(!cont.value)return;const v=cont.value.split('|');wkg=+v[0];fragVal=v[1];syncKg();update()};
 document.getElementById('exp').onchange=()=>{document.getElementById('expInfo').innerHTML='Factor NEQ aplicado: <b style="color:var(--ink)">'+exp.selectedOptions[0].text+'</b>. Radios calculados con el equivalente TNT.';update()};
 /* ---- Mapa ---- */
 const map=L.map('map').setView([40.4168,-3.7038],12);
@@ -402,7 +410,10 @@ const threatIcon=L.divIcon({className:'',html:'<div style="width:20px;height:20p
 function tagIcon(txt,cls){return L.divIcon({className:'',html:'<div class="tagIco '+(cls||'')+'">'+txt+'</div>',iconSize:[52,24],iconAnchor:[26,12]})}
 let uMarker=null,threats=[],active=null,pci=null,pceod=null,placing=null,watchId=null;
 function addCircles(ll,list){
-  return radii().out.map(r=>L.circle(ll,{radius:r.r,color:r.col,weight:2.5,opacity:.95,dashArray:r.sec?'7 6':null,fill:true,fillColor:r.col,fillOpacity:.07,interactive:false}));
+  return radii().draw.map(r=>{
+    const isFrag=r.lbl.indexOf('Fragmentación')>=0;
+    return L.circle(ll,{radius:r.r,color:r.col,weight:isFrag?3:2.5,opacity:.95,dashArray:r.sec?'7 6':null,fill:true,fillColor:r.col,fillOpacity:isFrag?.14:.07,interactive:false});
+  });
 }
 function clearCircles(cs){cs.forEach(c=>c.remove())}
 function drawThreat(t){
