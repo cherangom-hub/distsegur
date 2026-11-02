@@ -50,6 +50,18 @@ td.r{text-align:right;font-variant-numeric:tabular-nums}
 .lio .x{margin-left:auto;background:none;border:1px solid var(--line);border-radius:5px;color:var(--red);cursor:pointer;font-family:inherit;min-width:34px;min-height:30px}
 .src{font-size:10px;color:var(--dim)}
 .src a{color:var(--blue)}
+/* ---- Pantalla completa del mapa ---- */
+#mapWrap{position:relative;margin-top:10px}
+.fsb{position:absolute;top:8px;right:8px;z-index:1000;background:rgba(13,19,25,.85);border:1px solid var(--line);color:var(--ink);border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:15px;padding:8px 12px;min-height:44px;min-width:44px;cursor:pointer}
+#fsPlace{display:none;position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:1000;background:var(--blue);color:#06121C;border:0;border-radius:7px;font-family:'Saira Condensed';font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:12px 16px;min-height:46px;cursor:pointer;white-space:nowrap}
+#mapWrap:fullscreen{background:#0D1319}
+#mapWrap:fullscreen #map{height:100vh;border-radius:0;border:0}
+#mapWrap:fullscreen #fsPlace{display:block;position:fixed}
+#mapWrap:fullscreen .fsb{position:fixed;z-index:10000}
+#mapWrap.fs #map{position:fixed;inset:0;z-index:9998;height:100vh;width:100vw;border-radius:0;border:0}
+#mapWrap.fs{background:#0D1319}
+#mapWrap.fs #fsPlace{display:block;position:fixed;z-index:10000}
+#mapWrap.fs .fsb{position:fixed;z-index:10000}
 @media(min-width:900px){.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}}
 </style>
 </head>
@@ -118,11 +130,6 @@ td.r{text-align:right;font-variant-numeric:tabular-nums}
       <label for="uo2">Munición sin explotar (UXO)</label>
       <select id="uo2">
         <option value="" disabled selected>Seleccionar munición…</option>
-        <optgroup label="Drones / UAS kamikaze">
-          <option value="3|1|Lancet-3 (RUS) ~3 kg NEQ|https://en.wikipedia.org/wiki/Lancet_(drone)">Lancet-3 — ~3 kg NEQ</option>
-          <option value="15|1|Shahed-131 (IRN/RUS) ~15 kg NEQ|https://en.wikipedia.org/wiki/Shahed-131">Shahed-131 — ~15 kg NEQ</option>
-          <option value="40|1|Shahed-136 / Geran-2 (IRN/RUS) ~40 kg NEQ|https://en.wikipedia.org/wiki/Shahed-136">Shahed-136 / Geran-2 — ~40 kg NEQ</option>
-        </optgroup>
         <optgroup label="Granadas de mano — Rusia / URSS">
           <option value="0.11|1|RGD-5 (RUS) 110 g|https://en.wikipedia.org/wiki/RGD-5">RGD-5 — 110 g NEQ</option>
           <option value="0.06|1|F-1 (RUS) 60 g|https://en.wikipedia.org/wiki/F-1_(grenade)">F-1 — 60 g NEQ</option>
@@ -250,7 +257,8 @@ td.r{text-align:right;font-variant-numeric:tabular-nums}
           <option value="13|1|AIM-132 ASRAAM|https://en.wikipedia.org/wiki/AIM-132_ASRAAM">AIM-132 ASRAAM — 13 kg NEQ</option>
           <option value="63|1|MBDA Meteor|https://en.wikipedia.org/wiki/Meteor_(missile)">Meteor — 63 kg NEQ</option>
           <option value="16|1|MICA (EM/IR)|https://en.wikipedia.org/wiki/MICA_(missile)">MICA — 16 kg NEQ</option>
-        <optgroup label="Misiles aire-tierra / crucero">
+        </optgroup>
+        <optgroup label="Misiles aire-aire">
           <option value="4.7|1|AIM-9 Sidewinder|https://en.wikipedia.org/wiki/AIM-9_Sidewinder">AIM-9 Sidewinder — 4,7 kg NEQ</option>
           <option value="20|1|AIM-120 AMRAAM|https://en.wikipedia.org/wiki/AIM-120_AMRAAM">AIM-120 AMRAAM — 20 kg NEQ</option>
           <option value="3.5|1|R-60|https://en.wikipedia.org/wiki/R-60_(missile)">R-60 — 3,5 kg NEQ</option>
@@ -261,6 +269,11 @@ td.r{text-align:right;font-variant-numeric:tabular-nums}
           <option value="320|1|Kh-29|https://en.wikipedia.org/wiki/Kh-29">Kh-29 — 320 kg NEQ</option>
           <option value="450|1|BGM-109 Tomahawk|https://en.wikipedia.org/wiki/BGM-109_Tomahawk">BGM-109 Tomahawk — 450 kg NEQ</option>
           <option value="450|1|Storm Shadow / SCALP-EG|https://en.wikipedia.org/wiki/Storm_Shadow">Storm Shadow — 450 kg NEQ</option>
+        </optgroup>
+        <optgroup label="Drones / UAS kamikaze">
+          <option value="3|1|Lancet-3 (RUS) ~3 kg NEQ|https://en.wikipedia.org/wiki/Lancet_(drone)">Lancet-3 — ~3 kg NEQ</option>
+          <option value="15|1|Shahed-131 (IRN/RUS) ~15 kg NEQ|https://en.wikipedia.org/wiki/Shahed-131">Shahed-131 — ~15 kg NEQ</option>
+          <option value="40|1|Shahed-136 / Geran-2 (IRN/RUS) ~40 kg NEQ|https://en.wikipedia.org/wiki/Shahed-136">Shahed-136 / Geran-2 — ~40 kg NEQ</option>
         </optgroup>
         <optgroup label="Munición para drones / FPV">
           <option value="0.11|1|RGD-5 lanzada por dron|https://en.wikipedia.org/wiki/RGD-5">RGD-5 por dron — 110 g NEQ</option>
@@ -302,7 +315,11 @@ td.r{text-align:right;font-variant-numeric:tabular-nums}
   <div class="panel">
     <h2>03 · Mapa real · perímetros</h2>
     <button class="gpsBtn" id="gpsBtn" type="button">◎ Activar mi posicionamiento GPS</button>
-    <div id="map" style="margin-top:10px"></div>
+    <div id="mapWrap">
+      <div id="map"></div>
+      <button class="fsb" id="fsBtn" type="button" title="Pantalla completa">⛶ Pantalla completa</button>
+      <button id="fsPlace" type="button">📍 Posicionar amenaza aquí</button>
+    </div>
     <div class="legend">
       <span><i class="dot" style="background:#FF3B30"></i> Onda de choque — letal (≈35 kPa)</span>
       <span><i class="dot" style="background:#FF9F0A"></i> Onda de choque — daño mínimo (K = 18)</span>
@@ -340,20 +357,32 @@ td.r{text-align:right;font-variant-numeric:tabular-nums}
   </div>
 
   <div class="panel">
-    <h2>07 · Instrucciones de empleo</h2>
+    <h2>07 · Compartir cuadro de situación</h2>
+    <button class="gpsBtn" id="expBtn" type="button">📤 Exportar situación (archivo para el equipo)</button>
+    <button class="gpsBtn gray" id="copyBtn" type="button">📋 Copiar situación al portapapeles</button>
+    <button class="gpsBtn gray" id="shareBtn" type="button">📲 Compartir por mensajería (WhatsApp…)</button>
+    <button class="gpsBtn gray" id="impBtn" type="button">📥 Importar situación de un compañero</button>
+    <input type="file" id="impFile" accept=".json,.txt,application/json" style="display:none">
+    <div class="info" id="shareInfo">Exporta tu situación completa (amenazas con NEQ, PCI, PCEOD, registro y vista del mapa) y envíala a un compañero. Él pulsa «Importar», carga tu archivo y verá exactamente tu cuadro de situación en su mapa. También puedes copiar o compartir el resumen en texto por WhatsApp.</div>
+  </div>
+
+  <div class="panel">
+    <h2>08 · Instrucciones de empleo</h2>
     <button class="gpsBtn gray" id="helpBtn" type="button">📖 Ver instrucciones de empleo</button>
     <div id="helpBox" class="coordBox" style="display:none">
 <b>1 · Amenaza</b> — Elige IED (contenedor + explosivo supuesto + peso en kg TNT eq.) o UXO (catálogo de municiones; NEQ y metralla se fijan solos). Botón «Ver ficha e imagen» abre la referencia visual.
 
 <b>2 · Distancias</b> — Tabla de radios con distancias escaladas Z (K = 15,4 m/kg^⅓; daño mínimo K = 18): onda de choque letal y daño mínimo, daño estructural (madera/ladrillo/hormigón), fragmentación y zona de exclusión por cristales. Unidades kg·m / lb·ft conmutables.
 
-<b>3 · Mapa</b> — Activa tu GPS, pulsa «Posicionar en mapa amenaza» y toca el mapa; arrastra el punto y confirma con «Fijar amenaza actual» (o bórrala). PCI y PCEOD se colocan igual.
+<b>3 · Mapa</b> — Activa tu GPS, pulsa «Posicionar en mapa amenaza» y toca el mapa; arrastra el punto y confirma con «Fijar amenaza actual» (o bórrala). PCI y PCEOD se colocan igual. Botón «⛶ Pantalla completa» (arriba a la derecha del mapa) expande el mapa a todo el dispositivo; dentro tendrás el botón «Posicionar amenaza aquí» y sales con el mismo botón o con el gesto nativo del sistema.
 
 <b>4 · Coordenadas y exposición</b> — Coordenadas de amenazas, PCI y PCEOD; tu distancia a cada amenaza y si estás dentro de algún radio.
 
 <b>5 · Registro</b> — Cada amenaza fijada se anota con hora, coordenadas y munición. Editable y borrable línea a línea.
 
 <b>6 · Informe</b> — «Generar informe PDF» crea el informe con captura del mapa, amenazas, radios, puntos de control y registro.
+
+<b>7 · Compartir con el equipo</b> — «Exportar situación» descarga un archivo con todo tu cuadro de situación (amenazas, PCI, PCEOD, registro y vista). Envíalo por mensajería; tu compañero pulsa «Importar situación de un compañero» y carga el archivo: verá tu mapa y tus amenazas idénticas en su dispositivo. «Compartir por mensajería» envía un resumen en texto listo para WhatsApp. Los datos viajan solo en el archivo/txt que tú envíes; no hay servidor intermedio.
 
 ⚠️ Herramienta de apoyo orientativo para personal formado en EOD; no sustituye los SOP ni la evaluación de un especialista cualificado.
     </div>
@@ -378,7 +407,11 @@ btnDel=document.getElementById('btnDel'),btnPci=document.getElementById('btnPci'
 btnDelPci=document.getElementById('btnDelPci'),btnDelEod=document.getElementById('btnDelEod'),
 mapInfo=document.getElementById('mapInfo'),coordsBox=document.getElementById('coords'),
 logBox=document.getElementById('logBox'),pdfBtn=document.getElementById('pdfBtn'),pdfBox=document.getElementById('pdfBox'),
-helpBtn=document.getElementById('helpBtn'),helpBox=document.getElementById('helpBox');
+helpBtn=document.getElementById('helpBtn'),helpBox=document.getElementById('helpBox'),
+mapWrap=document.getElementById('mapWrap'),fsBtn=document.getElementById('fsBtn'),fsPlace=document.getElementById('fsPlace'),
+shareInfo=document.getElementById('shareInfo'),
+expBtn=document.getElementById('expBtn'),copyBtn=document.getElementById('copyBtn'),
+shareBtn=document.getElementById('shareBtn'),impBtn=document.getElementById('impBtn'),impFile=document.getElementById('impFile');
 if(helpBtn){helpBtn.onclick=()=>{const open=helpBox.style.display==='none';helpBox.style.display=open?'':'none';helpBtn.textContent=open?'📕 Ocultar instrucciones de empleo':'📖 Ver instrucciones de empleo';if(open)helpBox.scrollIntoView({behavior:'smooth',block:'nearest'});};}
 let mode='ied',units='metric',fragVal='1',wkg=1;
 const LB=2.20462,IMP=2.52;
@@ -390,7 +423,7 @@ const RANGES=[
  [2.9,'#5E7383','Daño estructural — hormigón (≈4–5 psi)',1]
 ];
 function Z(v){return v}
-function W(){return Math.max(.05,wkg*(mode==='ied'?+exp.value:(document.getElementById('uo2').value.split('|')[1]==='1'?1:1)))}
+function W(){return Math.max(.05,wkg*(mode==='ied'?+exp.value:1))}
 function frag(){return mode==='ied'?1:(document.getElementById('frag2').value==='1'?1:0)}
 function radii(){
   const w=W(),c=Math.cbrt(w),f=frag();
@@ -507,6 +540,30 @@ btnDel.onclick=()=>{
   log('Amenaza borrada del mapa.');
   refreshCoords();
 };
+/* ---- Pantalla completa del mapa ---- */
+function isFs(){return document.fullscreenElement===mapWrap||mapWrap.classList.contains('fs')}
+function exitFs(){
+  if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+  mapWrap.classList.remove('fs');
+  fsBtn.textContent='⛶ Pantalla completa';
+  setTimeout(()=>map.invalidateSize(),150);
+}
+fsBtn.onclick=()=>{
+  if(isFs()){exitFs();return;}
+  if(mapWrap.requestFullscreen){mapWrap.requestFullscreen().catch(()=>{mapWrap.classList.add('fs');fsBtn.textContent='✕ Salir de pantalla completa';setTimeout(()=>map.invalidateSize(),150);});}
+  else{mapWrap.classList.add('fs');}
+  if(isFs())fsBtn.textContent='✕ Salir de pantalla completa';
+  setTimeout(()=>map.invalidateSize(),250);
+};
+document.addEventListener('fullscreenchange',()=>{
+  if(!document.fullscreenElement)mapWrap.classList.remove('fs');
+  fsBtn.textContent=isFs()?'✕ Salir de pantalla completa':'⛶ Pantalla completa';
+  setTimeout(()=>map.invalidateSize(),150);
+});
+fsPlace.onclick=()=>{
+  placing='threat';btnPlace.textContent='⌖ Toca el mapa…';
+  mapInfo.textContent='Toca el mapa para indicar la posición de la amenaza…';
+};
 /* ---- GPS ---- */
 gpsBtn.onclick=()=>{
   if(watchId){navigator.geolocation.clearWatch(watchId);watchId=null;gpsBtn.textContent='◎ Activar mi posicionamiento GPS';return;}
@@ -552,7 +609,7 @@ function mgrs(ll){
   const band='CDEFGHJKLMNPQRSTUVWX'[Math.min(19,Math.max(0,Math.floor((Math.max(-80,Math.min(79.9,lat))+80)/8)))];
   const rowLetters=(zone%2===1)?'ABCDEFGHJKLMNPQRSTUV':'FGHJKLMNPQRSTUVABCDE';
   const rowChar=rowLetters[Math.floor((north%2000000)/100000)];
-  return zone+band+' '+colChar+rowChar+' '+String(Math.floor(east%100000)).padStart(5,'0')+' '+String(Math.floor(north%100000)).padStart(5,'0');
+  return zone+band+' '+colChar+rowChar+' '+String(Math.floor(east%100000)).padStart(5,'0')+' '+String(Math.floor(north%2000000%100000)).padStart(5,'0');
 }
 function coordLine(ll){return dms(ll)+'\n   MGRS: '+mgrs(ll);}
 function userLL(){return uMarker?uMarker.getLatLng():null}
@@ -609,6 +666,130 @@ function renderLog(){
     b.onclick=()=>{logItems.splice(i,1);renderLog();};
     d.appendChild(b);logBox.appendChild(d);
   });
+}
+/* ---- 07 · Exportar / importar situación ---- */
+function exportData(){
+  const list=threats.concat(active?[active]:[]);
+  return{
+    app:'PERIMETER-GPS',v:1,
+    fecha:new Date().toISOString(),
+    mode,units,wkg,
+    cont:cont.value,exp:exp.value,
+    uo:document.getElementById('uo2').value,frag2:document.getElementById('frag2').value,
+    amenazas:list.map(t=>({label:t.label,lat:t.latlng.lat,lng:t.latlng.lng})),
+    pci:pci?{lat:pci.latlng.lat,lng:pci.latlng.lng}:null,
+    pceod:pceod?{lat:pceod.latlng.lat,lng:pceod.latlng.lng}:null,
+    registro:logItems,
+    vista:{lat:map.getCenter().lat,lng:map.getCenter().lng,zoom:map.getZoom()}
+  };
+}
+function tsName(){return new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}
+function shareText(d){
+  let s='⚠️ CUADRO DE SITUACIÓN — PERIMETER GPS\n'+new Date(d.fecha).toLocaleString('es-ES')+'\n';
+  d.amenazas.forEach(a=>{
+    s+='\n◆ '+a.label+' — '+dms([a.lat,a.lng])+'\n   MGRS: '+mgrs([a.lat,a.lng]);
+  });
+  if(d.pci)s+='\n\n◆ PCI — '+dms([d.pci.lat,d.pci.lng])+' · MGRS: '+mgrs([d.pci.lat,d.pci.lng]);
+  if(d.pceod)s+='\n◆ PCEOD — '+dms([d.pceod.lat,d.pceod.lng])+' · MGRS: '+mgrs([d.pceod.lat,d.pceod.lng]);
+  s+='\n\n(Importa el archivo JSON adjunto en PERIMETER GPS para verlo en el mapa.)';
+  return s;
+}
+expBtn.onclick=()=>{
+  const data=exportData();
+  const blob=new Blob([JSON.stringify(data,null,1)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='situacion_perimetro_'+tsName()+'.json';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  log('Situación exportada ('+data.amenazas.length+' amenazas) — archivo descargado.');
+  shareInfo.innerHTML='✅ Archivo <b>situacion_perimetro_'+tsName()+'.json</b> descargado. Envíalo a tu equipo (WhatsApp, Telegram, radio-datos…); ellos lo importan con «Importar situación de un compañero».';
+};
+copyBtn.onclick=()=>{
+  const txt=JSON.stringify(exportData());
+  const done=()=>{shareInfo.innerHTML='✅ Situación copiada al portapapeles. Pégala en un mensaje a tu compañero; él la importa desde «Importar situación de un compañero» eligiendo su archivo o pegándola.';log('Situación copiada al portapapeles.');};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(done,()=>fallbackCopy(txt,done));
+  else fallbackCopy(txt,done);
+};
+function fallbackCopy(txt,done){
+  const ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');done();}catch(e){shareInfo.textContent='No se pudo copiar automáticamente. Usa «Exportar situación» y envía el archivo.';}
+  ta.remove();
+}
+shareBtn.onclick=()=>{
+  const d=exportData();
+  const txt=shareText(d);
+  if(navigator.share){
+    navigator.share({title:'PERIMETER GPS — Cuadro de situación',text:txt}).then(()=>log('Situación compartida por mensajería.')).catch(()=>{});
+  }else{
+    window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+    log('Situación preparada para compartir (WhatsApp Web).');
+  }
+};
+impBtn.onclick=()=>impFile.click();
+impFile.onchange=()=>{
+  const f=impFile.files&&impFile.files[0];
+  if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{applyImported(JSON.parse(r.result));}
+    catch(e){shareInfo.textContent='⚠️ El archivo no es una situación válida de PERIMETER GPS. Comprueba que tu compañero te envió el .json exportado por la app.';}
+    impFile.value='';
+  };
+  r.readAsText(f);
+};
+function applyImported(d){
+  if(!d||d.app!=='PERIMETER-GPS'||!Array.isArray(d.amenazas))throw new Error('formato');
+  /* limpiar estado actual */
+  [...threats].forEach(t=>{clearCircles(t.circles);t.marker.remove();});threats=[];
+  if(active){clearCircles(active.circles);active.marker.remove();active=null;}
+  if(pci){pci.marker.remove();pci=null;}btnDelPci.disabled=true;
+  if(pceod){pceod.marker.remove();pceod=null;}btnDelEod.disabled=true;
+  logItems=[];renderLog();
+  /* restaurar configuración */
+  mode=(d.mode==='uxo')?'uxo':'ied';
+  units=(d.units==='imperial')?'imperial':'metric';
+  mIed.classList.toggle('on',mode==='ied');mUxo.classList.toggle('on',mode==='uxo');
+  iedSec.style.display=mode==='ied'?'':'none';
+  uxoSec.style.display=mode==='uxo'?'':'none';
+  uM.classList.toggle('on',units==='metric');uI.classList.toggle('on',units==='imperial');
+  document.getElementById('thM').textContent=units==='metric'?'Distancia':'Distance';
+  wkg=Math.max(.01,+d.wkg||1);
+  if(mode==='ied'){
+    if(d.cont)cont.value=d.cont;
+    if(d.exp)exp.value=d.exp;
+  }else{
+    if(d.uo)document.getElementById('uo2').value=d.uo;
+    if(d.frag2)document.getElementById('frag2').value=d.frag2;
+  }
+  syncKg();
+  /* reconstruir amenazas */
+  d.amenazas.forEach(a=>{
+    if(typeof a.lat!=='number'||typeof a.lng!=='number')return;
+    const ll=[a.lat,a.lng];
+    const marker=L.marker(ll,{icon:tagIcon(a.label||'A','thr')}).addTo(map);
+    marker.dragging.disable();
+    const t={latlng:ll,marker,circles:[],label:a.label||'A'};
+    drawThreat(t);threats.push(t);
+  });
+  btnFix.disabled=true;btnDel.disabled=!(threats.length);
+  /* reconstruir PCI / PCEOD */
+  if(d.pci&&typeof d.pci.lat==='number'){
+    const m=L.marker([d.pci.lat,d.pci.lng],{icon:tagIcon('PCI','')}).addTo(map);
+    pci={latlng:[d.pci.lat,d.pci.lng],marker:m};btnDelPci.disabled=false;
+  }
+  if(d.pceod&&typeof d.pceod.lat==='number'){
+    const m=L.marker([d.pceod.lat,d.pceod.lng],{icon:tagIcon('EOD','eod')}).addTo(map);
+    pceod={latlng:[d.pceod.lat,d.pceod.lng],marker:m};btnDelEod.disabled=false;
+  }
+  /* registro y vista */
+  logItems=Array.isArray(d.registro)?d.registro.slice():[];
+  logItems.unshift({t:new Date().toLocaleTimeString('es-ES'),txt:'Situación IMPORTADA ('+threats.length+' amenazas) — original de '+new Date(d.fecha).toLocaleString('es-ES')});
+  renderLog();
+  if(d.vista&&typeof d.vista.lat==='number')map.setView([d.vista.lat,d.vista.lng],d.vista.zoom||14);
+  update();
+  shareInfo.innerHTML='✅ Situación importada: <b>'+threats.length+' amenaza(s)</b>, '+(pci?'PCI, ':'')+(pceod?'PCEOD, ':'')+logItems.length+' líneas de registro. Mapa centrado en la vista del emisor ('+new Date(d.fecha).toLocaleString('es-ES')+').';
 }
 /* ---- Informe PDF ---- */
 function captureMap(){
