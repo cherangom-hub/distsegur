@@ -5,707 +5,654 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>PERIMETER GPS — Distancias de Seguridad IED / UXO</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{
-  --bg:#0A0E17; --panel:#1E2330; --panel2:#161B26; --line:#2A2F3D;
-  --txt:#E8ECF4; --muted:#8A93A6;
-  --red:#C81E1E; --red2:#FF3B30; --orange:#FFA940; --yellow:#FFD60A; --green:#4ADE80; --blue:#34C759; --accent:#FF3B30;
-  --radius:12px;
+  --bg:#0B0F12; --panel:#111820; --line:#1E2A33; --ink:#DDE6EC; --dim:#7C8B96;
+  --red:#FF3B30; --orange:#FF9F0A; --yellow:#FFD60A; --green:#30D158; --blue:#4FA3E3; --mil:#5B6B2F;
 }
-*{box-sizing:border-box; margin:0; padding:0;}
-html,body{height:100%;}
-body{
-  background:var(--bg); color:var(--txt);
-  font-family:'IBM Plex Mono',monospace; font-size:14px;
-  -webkit-font-smoothing:antialiased;
-}
-h1,h2,h3,.saira{font-family:'Saira Condensed',sans-serif; text-transform:uppercase; letter-spacing:.06em;}
-/* ---------- TOPBAR ---------- */
-.topbar{
-  position:sticky; top:0; z-index:1200;
-  background:linear-gradient(180deg,#12161F 0%,#0C101A 100%);
-  border-bottom:1px solid var(--line);
-  padding:10px 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
-}
-.topbar .logo{
-  font-family:'Saira Condensed'; font-weight:800; font-size:22px;
-  letter-spacing:.12em; color:var(--txt);
-}
-.topbar .logo span{color:var(--accent);}
-.topbar .sub{font-size:11px; color:var(--muted); letter-spacing:.08em;}
-.chip{
-  display:inline-flex; align-items:center; gap:6px;
-  border:1px solid var(--line); background:var(--panel2);
-  border-radius:999px; padding:4px 12px; font-size:11px; color:var(--muted);
-}
-.chip .dot{width:8px; height:8px; border-radius:50%; background:#555; display:inline-block;}
-.chip.on .dot{background:var(--green); box-shadow:0 0 6px var(--green);}
-.chip.on{color:var(--green); border-color:#274a35;}
-.btn{
-  font-family:'Saira Condensed'; text-transform:uppercase; letter-spacing:.08em;
-  font-weight:700; font-size:13px;
-  border:1px solid var(--line); background:var(--panel); color:var(--txt);
-  border-radius:999px; padding:8px 18px; cursor:pointer; transition:.15s;
-}
-.btn:hover{border-color:var(--accent); color:var(--accent);}
-.btn.primary{background:var(--red); border-color:var(--red); color:#fff;}
-.btn.primary:hover{background:var(--red2); border-color:var(--red2); color:#fff;}
-.btn.small{padding:5px 12px; font-size:11px;}
-.btn.danger{border-color:var(--red2); color:var(--red2); background:transparent;}
-/* ---------- LAYOUT ---------- */
-main{max-width:1280px; margin:0 auto; padding:16px; display:flex; flex-direction:column; gap:14px;}
-.panel{
-  background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
-  padding:16px; box-shadow:0 4px 24px rgba(0,0,0,.35);
-}
-.panel>h2{
-  font-size:15px; font-weight:700; color:var(--txt); margin-bottom:12px;
-  display:flex; align-items:center; gap:10px;
-  border-bottom:1px solid var(--line); padding-bottom:8px;
-}
-.panel>h2 .idx{
-  color:var(--accent); font-weight:800; font-size:13px;
-  border:1px solid var(--red2); border-radius:6px; padding:1px 7px;
-}
-.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px;}
-label{display:block; font-size:11px; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:.05em;}
-input,select,textarea{
-  width:100%; background:var(--panel2); color:var(--txt);
-  border:1px solid var(--line); border-radius:8px; padding:9px 10px;
-  font-family:'IBM Plex Mono'; font-size:13px; outline:none;
-}
-input:focus,select:focus,textarea:focus{border-color:var(--accent);}
-.row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;}
-/* ---------- MAPA + LEYENDA (nunca superpuestos) ---------- */
-.map-area{
-  display:flex; flex-direction:column; gap:12px; /* layout en flujo: el mapa y la leyenda ocupan cajas separadas */
-}
-#mapWrap{
-  position:relative; border-radius:var(--radius); overflow:hidden;
-  border:1px solid var(--line); background:var(--panel2);
-  height:52vh; min-height:320px; flex:0 0 auto;
-}
-#map{width:100%; height:100%; background:#0d1220;}
-/* Pantalla completa — API nativa */
-#mapWrap:fullscreen{height:100vh; width:100vw; border-radius:0; border:none;}
-#mapWrap:-webkit-full-screen{height:100vh; width:100vw; border-radius:0; border:none;}
-/* Fallback iOS/Safari sin Fullscreen API */
-#mapWrap.fs-fallback{
-  position:fixed; inset:0; z-index:3000; height:100vh; height:100dvh;
-  width:100vw; border-radius:0; border:none;
-}
-#fsExit{
-  position:absolute; top:10px; right:10px; z-index:1100; display:none;
-}
-#mapWrap.fs-fallback #fsExit, #mapWrap:fullscreen #fsExit, #mapWrap:-webkit-full-screen #fsExit{display:block;}
-.map-tools{
-  position:absolute; top:10px; left:10px; z-index:1100; display:flex; gap:8px;
-}
-.leaflet-control-attribution{background:rgba(10,14,23,.8)!important; color:#666!important; font-size:9px;}
-.leaflet-bar a{background:var(--panel)!important; color:var(--txt)!important; border-color:var(--line)!important;}
-/* LEYENDA: panel independiente EN FLUJO, fuera del área del mapa. Nunca position:absolute sobre el mapa */
-#legendPanel{
-  flex:0 0 auto;
-  background:var(--panel2); border:1px solid var(--line); border-radius:var(--radius);
-}
-#legendPanel header{
-  display:flex; align-items:center; justify-content:space-between;
-  padding:10px 14px; cursor:pointer; user-select:none;
-}
-#legendPanel header h3{font-size:13px; color:var(--txt);}
-#legendToggle{font-size:12px; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:3px 12px;}
-#legendBody{padding:4px 14px 12px;}
-#legendPanel.collapsed #legendBody{display:none;}
-.legend-item{display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px dashed #232838; font-size:12px;}
-.legend-item:last-child{border-bottom:none;}
-.legend-item .sw{width:26px; height:12px; border-radius:3px; flex:0 0 auto; border:2px solid;}
-.legend-item .ord{
-  width:20px; height:20px; border-radius:50%; flex:0 0 auto;
-  display:flex; align-items:center; justify-content:center;
-  font-family:'Saira Condensed'; font-weight:800; font-size:12px;
-  background:var(--panel); border:1px solid var(--line); color:var(--muted);
-}
-/* ---------- TABLAS ---------- */
-table{width:100%; border-collapse:collapse; font-size:12px;}
-th,td{border:1px solid var(--line); padding:7px 9px; text-align:left;}
-th{background:var(--panel2); font-family:'Saira Condensed'; text-transform:uppercase; letter-spacing:.06em; font-size:12px; color:var(--muted);}
-td.num{font-variant-numeric:tabular-nums;}
-/* ---------- AVISOS DE PELIGRO (04 · COORDENADAS): MAYÚSCULAS + ROJO ---------- */
-.danger{
-  color:var(--red2); text-transform:uppercase; font-weight:600;
-  font-size:13px; letter-spacing:.04em;
-}
-#dangerZone{display:flex; flex-direction:column; gap:6px;}
-#dangerZone .danger{border:1px solid var(--red2); border-radius:8px; padding:8px 12px; background:rgba(200,30,30,.12);}
-.safe{color:var(--green); text-transform:uppercase; font-weight:600; font-size:13px;}
-.coord-box{font-variant-numeric:tabular-nums; background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:13px;}
-.coord-box b{color:var(--accent);}
-/* ---------- FICHAS ---------- */
-.ficha-item{
-  display:flex; justify-content:space-between; align-items:center; gap:10px;
-  background:var(--panel2); border:1px solid var(--line); border-radius:8px;
-  padding:9px 12px; margin-bottom:8px; font-size:12px;
-}
-.ficha-item .name{font-family:'Saira Condensed'; text-transform:uppercase; letter-spacing:.05em; font-weight:700;}
-.ficha-item .meta{color:var(--muted); font-size:11px;}
-/* ---------- MODAL README ---------- */
-.modal{
-  display:none; position:fixed; inset:0; z-index:4000;
-  background:rgba(5,8,14,.75); align-items:center; justify-content:center; padding:16px;
-}
-.modal.open{display:flex;}
-.modal .box{
-  background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
-  max-width:640px; width:100%; max-height:80vh; overflow:auto; padding:20px;
-}
-.modal .box h2{color:var(--accent); font-size:16px; margin-bottom:12px;}
-.modal .box pre{white-space:pre-wrap; font-size:12px; color:var(--txt); line-height:1.7;}
-footer{
-  text-align:center; padding:22px 16px 30px; color:var(--muted); font-size:11px;
-}
-@media(max-width:720px){
-  #mapWrap{height:42vh; min-height:260px;}
-  .grid{grid-template-columns:1fr 1fr;}
-}
-@media(max-width:480px){ .grid{grid-template-columns:1fr;} }
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:'IBM Plex Mono',monospace;font-size:14px;line-height:1.5}
+.wrap{max-width:1100px;margin:0 auto;padding:16px 12px 60px}
+header{padding:8px 0 14px;border-bottom:1px solid var(--line);margin-bottom:14px}
+h1{font-family:'Saira Condensed';font-size:30px;font-weight:800;letter-spacing:.04em;color:var(--red)}
+header p{color:var(--dim);font-size:12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:14px}
+h2{font-family:'Saira Condensed';font-size:19px;font-weight:700;letter-spacing:.06em;color:var(--red);text-transform:uppercase;margin-bottom:10px}
+h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:12px 0 6px}
+label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:10px 0 4px}
+select,input{width:100%;background:#0D1319;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:inherit;font-size:13px;padding:9px;min-height:44px}
+optgroup[label="Submuniciones"]{color:var(--yellow)}
+.gpsBtn{width:100%;margin-top:10px;background:var(--blue);color:#06121C;border:0;border-radius:7px;font-family:'Saira Condensed';font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:12px;min-height:46px;cursor:pointer}
+.gpsBtn.gray{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+.gpsBtn.redb{background:var(--red);color:#fff}
+.gpsBtn:disabled{opacity:.45;cursor:default}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{background:#0D1319;border:0;color:var(--dim);font-family:inherit;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:11px 0;min-height:44px;cursor:pointer}
+.seg button.on{background:var(--red);color:#fff;font-weight:600}
+.info{font-size:11px;color:var(--dim);background:#0D1319;border:1px solid var(--line);border-radius:6px;padding:8px;margin-top:8px;line-height:1.6}
+.coordBox{font-size:12px;background:#0D1319;border:1px solid var(--line);border-radius:6px;padding:9px;margin-top:8px;white-space:pre-wrap;line-height:1.7}
+.warn{color:var(--red);font-weight:600}
+table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
+th,td{border:1px solid var(--line);padding:7px 6px;text-align:left}
+th{background:#0D1319;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+td.r{text-align:right;font-variant-numeric:tabular-nums}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.dash{border-radius:0}
+#map{height:56vh;min-height:340px;border-radius:8px;border:1px solid var(--line);background:#0D1319}
+.legend{font-size:11px;color:var(--dim);margin-top:10px;display:grid;gap:4px}
+.legend i.dot{width:12px;height:12px}
+.tagIco{background:#0D1319;border:2px solid var(--blue);color:var(--blue);font-family:'Saira Condensed';font-weight:800;font-size:12px;letter-spacing:.05em;border-radius:5px;padding:2px 6px;white-space:nowrap}
+.tagIco.eod{border-color:var(--green);color:var(--green)}
+.tagIco.thr{background:none;border:0;color:var(--red);text-shadow:0 0 4px rgba(11,15,18,.9),0 0 2px rgba(11,15,18,.9)}
+.lio{display:flex;gap:8px;align-items:flex-start;font-size:12px;border-bottom:1px dashed var(--line);padding:7px 0;line-height:1.55}
+.lio .x{margin-left:auto;background:none;border:1px solid var(--line);border-radius:5px;color:var(--red);cursor:pointer;font-family:inherit;min-width:34px;min-height:30px}
+.src{font-size:10px;color:var(--dim)}
+.src a{color:var(--blue)}
+@media(min-width:900px){.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}}
 </style>
 </head>
 <body>
-
-<header class="topbar">
-  <div>
-    <div class="logo">PERIMETER <span>GPS</span></div>
-    <div class="sub">HERRAMIENTA TÁCTICA · DISTANCIAS DE SEGURIDAD IED / UXO</div>
-  </div>
-  <div style="flex:1"></div>
-  <div class="chip" id="gpsChip"><span class="dot"></span><span id="gpsChipTxt">GPS OFF</span></div>
-  <button class="btn small" id="btnFs">⛶ Pantalla completa</button>
+<div class="wrap">
+<header>
+  <h1>PERIMETER GPS</h1>
+  <p>Distancias de seguridad IED / UXO · cálculo orientativo de perímetros con distancias escaladas Z (K = 15,4 m/kg^⅓) sobre la carga TNT equivalente</p>
 </header>
 
-<nav style="max-width:1280px;margin:12px auto 0;padding:0 16px;display:flex;gap:8px;flex-wrap:wrap">
-  <a class="btn small" href="#p1">01 Ficha</a>
-  <a class="btn small" href="#p2">02 Amenaza</a>
-  <a class="btn small" href="#p3">03 Mapa</a>
-  <a class="btn small" href="#p4">04 Coordenadas</a>
-  <a class="btn small" href="#p5">05 Informe</a>
-  <a class="btn small" href="#p6">06 Ajustes</a>
-  <a class="btn small" href="#p7">07 Fichas</a>
-</nav>
+<div class="cols">
+<div>
 
-<main>
-
-  <!-- 01 · FICHA -->
-  <section class="panel" id="p1">
-    <h2><span class="idx">01</span> FICHA DE EXPEDIENTE</h2>
-    <div class="grid">
-      <div><label>Nombre de la ficha / expediente</label><input id="fNombre" placeholder="Ej. EXP-2026-014"></div>
-      <div><label>Fecha (introducción manual)</label><input type="date" id="fFecha"></div>
-      <div><label>Hora (introducción manual)</label><input type="time" id="fHora"></div>
-      <div><label>Operador / unidad</label><input id="fOperador" placeholder="Unidad / responsable"></div>
-    </div>
-    <div style="margin-top:10px"><label>Observaciones</label><textarea id="fObs" rows="2" placeholder="Notas de la incidencia…"></textarea></div>
-  </section>
-
-  <!-- 02 · DATOS DE AMENAZA -->
-  <section class="panel" id="p2">
-    <h2><span class="idx">02</span> DATOS DE LA AMENAZA</h2>
-    <div class="grid">
-      <div><label>Tipo de artefacto</label>
-        <select id="tTipo">
-          <option value="IED">IED (artesano)</option>
-          <option value="UXO">UXO (munición sin explotar)</option>
-          <option value="GRANADA">Granada de mano</option>
-          <option value="MORTERO">Proyectil de mortero</option>
-          <option value="ARTILLERIA">Proyectil de artillería</option>
-        </select>
-      </div>
-      <div><label>Peso del explosivo W (kg TNT)</label><input type="number" id="tPeso" value="1" min="0.01" step="0.01"></div>
-      <div><label>Escalado Z — fórmula R = K · W^(1/3)</label><input id="tFormula" value="R = K · ∛W" readonly></div>
-    </div>
-    <p style="margin-top:10px;font-size:12px;color:var(--muted)">
-      Coloca la amenaza <b style="color:var(--accent)">pulsando sobre el mapa</b>. Se dibujarán los círculos de radios con el color y el orden de la leyenda.
-    </p>
-  </section>
-
-  <!-- 03 · MAPA + LEYENDA -->
-  <section class="panel" id="p3">
-    <h2><span class="idx">03</span> MAPA TÁCTICO</h2>
-    <div class="map-area">
-      <div id="mapWrap">
-        <div class="map-tools">
-          <button class="btn small" id="btnFs2">⛶ Pantalla completa</button>
-          <button class="btn small" id="btnCentrar">⌖ Centrar GPS</button>
-        </div>
-        <button class="btn small danger" id="fsExit">✕ Salir de pantalla completa</button>
-        <button class="btn small" id="fsBtn" style="position:absolute;top:10px;left:10px;z-index:1100">⛶ Pantalla completa</button>
-        <div id="map"></div>
-        <script>
-        (function(){
-          var b=document.getElementById('fsBtn'); if(!b) return;
-          b.addEventListener('click',function(){
-            var w=document.getElementById('mapWrap'), ex=document.getElementById('fsExit');
-            if(w.requestFullscreen){ w.requestFullscreen(); }
-            else if(w.webkitRequestFullscreen){ w.webkitRequestFullscreen(); }
-            else{ w.classList.add('fs-fallback'); if(ex){ ex.style.display='block'; } }
-          });
-        })();
-        </script>
-      </div>
-
-      <!-- LEYENDA: panel independiente debajo del mapa. Nunca se superpone. -->
-      <div id="legendPanel">
-        <header id="legendHead">
-          <h3>▣ LEYENDA · PERÍMETROS DE SEGURIDAD</h3>
-          <span id="legendToggle">OCULTAR ▲</span>
-        </header>
-        <div id="legendBody">
-          <div class="legend-item"><span class="ord">1</span><span class="sw" style="border-color:#FF3B30;background:rgba(255,59,48,.25)"></span><span>PERÍMETRO DE FRAGMENTACIÓN — línea continua roja</span></div>
-          <div class="legend-item"><span class="ord">2</span><span class="sw" style="border-color:#FFA940;background:rgba(255,169,64,.18)"></span><span>ONDA DE CHOQUE (sobrepresión)</span></div>
-          <div class="legend-item"><span class="ord">3</span><span class="sw" style="border-color:#FFD60A;background:rgba(255,214,10,.15)"></span><span>ZONA DE PELIGRO — DAÑO MÍNIMO (K = 18)</span></div>
-          <div class="legend-item"><span class="ord">4</span><span class="sw" style="border-color:#4ADE80;background:rgba(74,222,128,.14)"></span><span>PERÍMETRO DE SEGURIDAD (K = 15,4)</span></div>
-        </div>
-      </div>
+  <div class="panel">
+    <h2>01 · Amenaza</h2>
+    <label for="cont">Tipo de amenaza</label>
+    <div class="seg">
+      <button id="mIed" class="on" type="button">IED</button>
+      <button id="mUxo" type="button">UXO / Munición</button>
     </div>
 
-    <h2 style="margin-top:16px"><span class="idx">·</span> RADIOS CALCULADOS (ESCALADO Z)</h2>
-    <table>
-      <thead><tr><th>#</th><th>Perímetro</th><th>K</th><th>Radio (m)</th></tr></thead>
-      <tbody id="tablaRadios">
-        <tr><td colspan="4" style="color:var(--muted)">Coloca la amenaza en el mapa para calcular los radios.</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <!-- 04 · COORDENADAS -->
-  <section class="panel" id="p4">
-    <h2><span class="idx">04</span> COORDENADAS</h2>
-    <div class="grid">
-      <div class="coord-box">AMENAZA<br><b id="cAmenaza">— sin colocar —</b></div>
-      <div class="coord-box">AMENAZA MGRS<br><b id="cMGRS">—</b></div>
-      <div class="coord-box">POSICIÓN GPS<br><b id="cGPS">— sin señal —</b></div>
-      <div class="coord-box">GPS MGRS<br><b id="cGPSMGRS">—</b></div>
-      <div class="coord-box">DISTANCIA GPS → AMENAZA<br><b id="cDist">—</b></div>
+    <div id="iedSec">
+      <div class="info">Define el contenedor/ocultación y el tipo de explosivo supuesto. La NEQ (TNT equivalente) se ajusta automáticamente según ambos.</div>
+      <label for="cont">Contenedor / ocultación</label>
+      <select id="cont">
+        <option value="" disabled selected>Seleccionar contenedor / ocultación…</option>
+        <option value="0.05|0.5|Carta postal">Carta postal</option>
+        <option value="1|0.6|Paquete postal">Paquete postal</option>
+        <option value="1|0.6|Mochila / bolso pequeño">Mochila / bolso pequeño</option>
+        <option value="2|0.7|Maletín">Maletín</option>
+        <option value="10|0.75|Maleta grande">Maleta grande</option>
+        <option value="25|0.8|Bidón / garrafa">Bidón / garrafa</option>
+        <option value="10|0.9|Bombona de gas">Bombona de gas</option>
+        <option value="50|1|Coche (VBIED)">Coche (VBIED)</option>
+        <option value="200|1.05|Furgoneta (VBIED)">Furgoneta (VBIED)</option>
+        <option value="500|1.1|Camión (VBIED)">Camión (VBIED)</option>
+      </select>
+      <label for="exp">Tipo de explosivo supuesto</label>
+      <select id="exp">
+        <optgroup label="Explosivos militares">
+          <option value="1">TNT — NEQ ×1,0</option>
+          <option value="1.6">RDX / Hexógeno — NEQ ×1,6</option>
+          <option value="1.7">Pentrita (PETN) — NEQ ×1,7</option>
+          <option value="1.85">Octógeno (HMX) — NEQ ×1,85</option>
+          <option value="1.6">C-4 (91 % RDX) — NEQ ×1,6</option>
+          <option value="1.35">Comp. B (RDX + TNT) — NEQ ×1,35</option>
+        </optgroup>
+        <optgroup label="Explosivos industriales">
+          <option value="0.9">Dinamita — NEQ ×0,9</option>
+          <option value="0.8">ANFO — NEQ ×0,8</option>
+          <option value="0.75">Emulsión / slurry — NEQ ×0,75</option>
+        </optgroup>
+        <optgroup label="Explosivos caseros (HME)">
+          <option value="0.85">TATP — NEQ ×0,85</option>
+          <option value="0.9">HMTD — NEQ ×0,9</option>
+          <option value="0.5">Pólvora negra — NEQ ×0,5</option>
+          <option value="0.6">Clorato + azúcar (HME) — NEQ ×0,6</option>
+        </optgroup>
+      </select>
+      <div class="info" id="expInfo">NEQ por defecto: ×1,0 (TNT). El factor elegido multiplica el peso antes de calcular los radios.</div>
+      <div class="info" id="uoInfo">Selecciona munición del catálogo: se fija NEQ (TNT eq.) y metralla automáticamente, con enlace de referencia visual para identificación.</div>
+      <script>(function(){window.addEventListener('load',function(){var s=document.getElementById('uo2');var g=s&&s.querySelector('optgroup[label="Drones / UAS kamikaze"]');if(g)s.appendChild(g);});})();</script>
     </div>
-    <div id="dangerZone" style="margin-top:12px">
-      <p style="color:var(--muted);font-size:12px">Los avisos de zona de peligro se muestran aquí (en mayúsculas y en rojo).</p>
+
+    <div id="uxoSec" style="display:none">
+      <label for="uo2">Munición sin explotar (UXO)</label>
+      <select id="uo2">
+        <option value="" disabled selected>Seleccionar munición…</option>
+        <optgroup label="Drones / UAS kamikaze">
+          <option value="3|1|Lancet-3 (RUS) ~3 kg NEQ|https://en.wikipedia.org/wiki/Lancet_(drone)">Lancet-3 — ~3 kg NEQ</option>
+          <option value="15|1|Shahed-131 (IRN/RUS) ~15 kg NEQ|https://en.wikipedia.org/wiki/Shahed-131">Shahed-131 — ~15 kg NEQ</option>
+          <option value="40|1|Shahed-136 / Geran-2 (IRN/RUS) ~40 kg NEQ|https://en.wikipedia.org/wiki/Shahed-136">Shahed-136 / Geran-2 — ~40 kg NEQ</option>
+        </optgroup>
+        <optgroup label="Granadas de mano — Rusia / URSS">
+          <option value="0.11|1|RGD-5 (RUS) 110 g|https://en.wikipedia.org/wiki/RGD-5">RGD-5 — 110 g NEQ</option>
+          <option value="0.06|1|F-1 (RUS) 60 g|https://en.wikipedia.org/wiki/F-1_(grenade)">F-1 — 60 g NEQ</option>
+          <option value="0.06|1|RGN (RUS) 60 g|https://cat-uxo.com">RGN — 60 g NEQ</option>
+          <option value="0.077|1|RGO (RUS) 77 g|https://cat-uxo.com">RGO — 77 g NEQ</option>
+          <option value="0.09|1|RGD-33 (RUS) 90 g|https://en.wikipedia.org/wiki/RGD-33">RGD-33 — 90 g NEQ</option>
+          <option value="0.12|1|RG-42 (RUS) 120 g|https://en.wikipedia.org/wiki/RG-42">RG-42 — 120 g NEQ</option>
+        </optgroup>
+        <optgroup label="Granadas de mano — EE. UU.">
+          <option value="0.18|1|M67 (EUA) 180 g|https://en.wikipedia.org/wiki/M67_grenade">M67 — 180 g NEQ</option>
+          <option value="0.057|1|Mk 2 (EUA) 57 g|https://en.wikipedia.org/wiki/Mk_2_grenade">Mk 2 — 57 g NEQ</option>
+          <option value="0.165|1|M61 (EUA) 165 g|https://en.wikipedia.org/wiki/M61_grenade">M61 — 165 g NEQ</option>
+          <option value="0.2|1|M26 (EUA) 200 g|https://en.wikipedia.org/wiki/M26_grenade">M26 — 200 g NEQ</option>
+          <option value="0.09|1|V40 Mini (EUA) 74 g|https://cat-uxo.com">V40 Mini — 74 g NEQ</option>
+          <option value="0.24|1|Mk 3 ofensiva cónica (EUA)|https://en.wikipedia.org/wiki/Mk_3_grenade">Mk 3 — 240 g NEQ</option>
+        </optgroup>
+        <optgroup label="Granadas de mano — Otros países">
+          <option value="0.16|1|No 36M Mills (GB) 170 g|https://en.wikipedia.org/wiki/Mills_bomb">Mills n.º 36M (GB) — 170 g NEQ</option>
+          <option value="0.095|1|DM51/DM61 (ALE)|https://cat-uxo.com">DM51/DM61 (ALE) — 95 g NEQ</option>
+        </optgroup>
+        <optgroup label="Morteros">
+          <option value="0.07|1|Granada VOG-17 (dron / lanzagranadas)|https://cat-uxo.com">VOG-17 — 70 g NEQ</option>
+          <option value="0.04|1|Granada VOG-25 (dron / lanzagranadas)|https://cat-uxo.com">VOG-25 — 40 g NEQ</option>
+          <option value="0.3|1|Proyectil de mortero 60 mm|https://en.wikipedia.org/wiki/M2_mortar">Mortero 60 mm — 300 g NEQ</option>
+          <option value="0.9|1|Proyectil de mortero 81 mm|https://en.wikipedia.org/wiki/M1_mortar">Mortero 81 mm — 900 g NEQ</option>
+          <option value="0.9|1|Proyectil de mortero 82 mm|https://en.wikipedia.org/wiki/82-BM-37">Mortero 82 mm — 900 g NEQ</option>
+          <option value="3|1|Proyectil de mortero 120 mm|https://en.wikipedia.org/wiki/120_mm_M1938_mortar">Mortero 120 mm — 3 kg NEQ</option>
+          <option value="5.5|1|Proyectil de mortero 160 mm|https://cat-uxo.com">Mortero 160 mm — 5,5 kg NEQ</option>
+        </optgroup>
+        <optgroup label="Proyectiles de artillería">
+          <option value="0.6|1|Proyectil 76 mm|https://en.wikipedia.org/wiki/76_mm_divisional_gun_M1942_(ZiS-3)">76 mm — 600 g NEQ</option>
+          <option value="0.8|1|Proyectil 85 mm|https://cat-uxo.com">85 mm — 800 g NEQ</option>
+          <option value="1.5|1|Proyectil 100 mm|https://cat-uxo.com">100 mm — 1,5 kg NEQ</option>
+          <option value="2.2|1|Proyectil 105 mm|https://en.wikipedia.org/wiki/M101_howitzer">105 mm — 2,2 kg NEQ</option>
+          <option value="5|1|Proyectil 122 mm|https://en.wikipedia.org/wiki/D-30_howitzer">122 mm — 5 kg NEQ</option>
+          <option value="4.2|1|Proyectil 130 mm|https://cat-uxo.com">130 mm — 4,2 kg NEQ</option>
+          <option value="7|1|Proyectil 152 mm|https://en.wikipedia.org/wiki/152_mm_howitzer-gun_M1937_(ML-20)">152 mm — 7 kg NEQ</option>
+          <option value="9|1|Proyectil 155 mm|https://en.wikipedia.org/wiki/M114_155_mm_howitzer">155 mm — 9 kg NEQ</option>
+          <option value="15|1|Proyectil 203 mm|https://en.wikipedia.org/wiki/M110_howitzer">203 mm — 15 kg NEQ</option>
+        </optgroup>
+        <optgroup label="Cohetes anticarro">
+          <option value="0.36|1|Cohete PG-7V (RPG-7)|https://en.wikipedia.org/wiki/RPG-7">PG-7V (RPG-7) — 360 g NEQ</option>
+          <option value="0.22|1|Cohete OG-7V fragmentario (RPG-7)|https://en.wikipedia.org/wiki/RPG-7">OG-7V (RPG-7) — 220 g NEQ</option>
+          <option value="0.56|1|Cohete PG-9 (SPG-9)|https://en.wikipedia.org/wiki/SPG-9">PG-9 (SPG-9) — 560 g NEQ</option>
+          <option value="0.34|1|Cohete M72 LAW|https://en.wikipedia.org/wiki/M72_LAW">M72 LAW — 340 g NEQ</option>
+          <option value="1|1|Cohete PG-29V (RPG-29)|https://en.wikipedia.org/wiki/RPG-29">PG-29V (RPG-29) — 1 kg NEQ</option>
+        </optgroup>
+        <optgroup label="Submuniciones">
+          <option value="0.17|1|BLU-63 (EUA) 170 g|https://cat-uxo.com">BLU-63 — 170 g NEQ</option>
+          <option value="0.29|1|BLU-97 CEB (EUA) 290 g|https://en.wikipedia.org/wiki/Combined_Effects_Munition">BLU-97 CEB — 290 g NEQ</option>
+          <option value="0.5|1|AO-2,5 RTM (RUS) 500 g|https://en.wikipedia.org/wiki/AO-2.5RTM">AO-2,5 RTM — 500 g NEQ</option>
+          <option value="1.3|1|PTAB-2,5 (RUS) 1,3 kg|https://en.wikipedia.org/wiki/PTAB_(bomb)">PTAB-2,5 — 1,3 kg NEQ</option>
+          <option value="0.3|1|M42/M46 DPICM (EUA) 300 g|https://cat-uxo.com">M42/M46 DPICM — 300 g NEQ</option>
+          <option value="0.04|1|PFM-1 mariposa (RUS) 40 g|https://en.wikipedia.org/wiki/PFM-1">PFM-1 — 40 g NEQ</option>
+        </optgroup>
+        <optgroup label="Minas antipersonal">
+          <option value="0.1|1|PMA-2 (YUG) AP 100 g|https://en.wikipedia.org/wiki/PMA-2_mine">PMA-2 — AP, 100 g NEQ</option>
+          <option value="0.24|1|PMN (RUS) AP 240 g|https://en.wikipedia.org/wiki/PMN_mine">PMN — AP, 240 g NEQ</option>
+          <option value="0.24|1|PMN-2 (RUS) AP 240 g|https://en.wikipedia.org/wiki/PMN-2">PMN-2 — AP, 240 g NEQ</option>
+          <option value="0.1|1|Type 72 (CHN) AP 100 g|https://en.wikipedia.org/wiki/Type_72_non-metallic_mine">Type 72 — AP, 100 g NEQ</option>
+          <option value="0.043|1|VS-50 (ITA) AP 43 g|https://en.wikipedia.org/wiki/VS-50_mine">VS-50 — AP, 43 g NEQ</option>
+          <option value="0.04|1|VS-MK2 (BEL) AP 39 g|https://cat-uxo.com">VS-MK2 — AP, 39 g NEQ</option>
+          <option value="0.05|1|M14 (EUA) AP 29 g|https://en.wikipedia.org/wiki/M14_mine">M14 — AP, 29 g NEQ</option>
+          <option value="0.455|1|M16 (EUA) AP saltarina 455 g|https://en.wikipedia.org/wiki/M16_mine">M16 — AP saltarina, 455 g NEQ</option>
+          <option value="0.5|1|M18A1 Claymore (EUA) 682 g|https://en.wikipedia.org/wiki/M18_Claymore_mine">M18A1 Claymore — 682 g NEQ</option>
+          <option value="0.04|1|PFM-1 (RUS) 40 g|https://en.wikipedia.org/wiki/PFM-1">PFM-1 mariposa — 40 g NEQ</option>
+          <option value="0.07|1|POM-2 (RUS) AP 70 g|https://cat-uxo.com">POM-2 — AP, 70 g NEQ</option>
+          <option value="0.1|1|PMA-3 (YUG) AP 85 g|https://en.wikipedia.org/wiki/PMA-3_mine">PMA-3 — AP, 85 g NEQ</option>
+          <option value="0.09|1|MAI-75 (ROU) AP 90 g|https://cat-uxo.com">MAI-75 — AP, 90 g NEQ</option>
+          <option value="0.115|1|M2 saltarina (EUA) 115 g|https://en.wikipedia.org/wiki/M2_mine">M2 — AP saltarina, 115 g NEQ</option>
+          <option value="0.125|1|M35 (EUA) AP 125 g|https://cat-uxo.com">M35 — AP, 125 g NEQ</option>
+          <option value="0.08|1|MS-3 (RUS) AP 80 g|https://cat-uxo.com">MS-3 — AP, 80 g NEQ</option>
+          <option value="0.09|1|B-2 bounding (CHN)|https://cat-uxo.com">B-2 — AP saltarina, 90 g NEQ</option>
+          <option value="0.075|1|Valmara 69 (ITA) 102 g|https://cat-uxo.com">Valmara 69 — AP saltarina, 102 g NEQ</option>
+          <option value="0.095|1|PM-79 (POL) AP 95 g|https://cat-uxo.com">PM-79 — AP, 95 g NEQ</option>
+          <option value="0.055|1|M25 (EUA) AP 55 g|https://cat-uxo.com">M25 — AP, 55 g NEQ</option>
+        </optgroup>
+        <optgroup label="Minas anticarro">
+          <option value="7.5|1|TM-62M (RUS) AT 7,5 kg|https://en.wikipedia.org/wiki/TM-62_mine">TM-62M — AT, 7,5 kg NEQ</option>
+          <option value="10|1|M15 (EUA) AT 10 kg|https://en.wikipedia.org/wiki/M15_mine">M15 — AT, 10 kg NEQ</option>
+          <option value="5.4|1|TM-46 (RUS) AT 5,4 kg|https://en.wikipedia.org/wiki/TM-46_mine">TM-46 — AT, 5,4 kg NEQ</option>
+          <option value="9.4|1|M19 (EUA) AT 9,4 kg|https://en.wikipedia.org/wiki/M19_mine">M19 — AT, 9,4 kg NEQ</option>
+        </optgroup>
+        <optgroup label="Bombas de aviación (EE. UU.)">
+          <option value="45|1|Bomba Mk 81 (250 lb)|https://en.wikipedia.org/wiki/Mark_81">Mk 81 — 45 kg NEQ</option>
+          <option value="89|1|Bomba Mk 82 (500 lb)|https://en.wikipedia.org/wiki/Mark_82">Mk 82 — 89 kg NEQ</option>
+          <option value="202|1|Bomba Mk 83 (1000 lb)|https://en.wikipedia.org/wiki/Mark_83">Mk 83 — 202 kg NEQ</option>
+          <option value="429|1|Bomba Mk 84 (2000 lb)|https://en.wikipedia.org/wiki/Mark_84">Mk 84 — 429 kg NEQ</option>
+          <option value="240|1|Penetrador BLU-109|https://en.wikipedia.org/wiki/BLU-109">BLU-109 — 240 kg NEQ</option>
+        </optgroup>
+        <optgroup label="Bombas de aviación (RUS)">
+          <option value="25|1|Bomba FAB-100|https://cat-uxo.com">FAB-100 — 25 kg NEQ</option>
+          <option value="100|1|Bomba FAB-250|https://cat-uxo.com">FAB-250 — 100 kg NEQ</option>
+          <option value="200|1|Bomba FAB-500|https://cat-uxo.com">FAB-500 — 200 kg NEQ</option>
+          <option value="675|1|Bomba FAB-1500|https://cat-uxo.com">FAB-1500 — 675 kg NEQ</option>
+          <option value="1400|1|Bomba FAB-3000|https://cat-uxo.com">FAB-3000 — 1,4 t NEQ</option>
+        </optgroup>
+        <optgroup label="Bombas de aviación (ISRAEL)">
+          <option value="202|1|SPICE-1000 (base Mk-83 guiada)|https://en.wikipedia.org/wiki/SPICE_(guidance_kit)">SPICE-1000 — 202 kg NEQ</option>
+          <option value="429|1|SPICE-2000 (base Mk-84 guiada)|https://en.wikipedia.org/wiki/SPICE_(guidance_kit)">SPICE-2000 — 429 kg NEQ</option>
+          <option value="100|1|MPR-500 penetrador mejorado|https://cat-uxo.com">MPR-500 — 100 kg NEQ</option>
+          <option value="150|1|Rampage / ROCKS (aire-tierra)|https://cat-uxo.com">Rampage / ROCKS — 150 kg NEQ</option>
+        </optgroup>
+        <optgroup label="Cohetes tierra-tierra / MLRS">
+          <option value="6.6|1|Cohete BM-21 Grad|https://en.wikipedia.org/wiki/BM-21_Grad">BM-21 Grad — 6,6 kg NEQ</option>
+          <option value="50|1|Cohete 9M27F (Uragan)|https://en.wikipedia.org/wiki/BM-27_Uragan">9M27F Uragan — 50 kg NEQ</option>
+          <option value="90|1|Cohete GMLRS M31|https://en.wikipedia.org/wiki/M270_MLRS">GMLRS M31 — 90 kg NEQ</option>
+        </optgroup>
+        <optgroup label="Misiles anticarro">
+          <option value="2.7|1|9M14 Malyutka|https://en.wikipedia.org/wiki/9M14_Malyutka">9M14 Malyutka — 2,7 kg NEQ</option>
+          <option value="2.7|1|9M113 Konkurs|https://en.wikipedia.org/wiki/9M113_Konkurs">9M113 Konkurs — 2,7 kg NEQ</option>
+          <option value="3.6|1|TOW (BGM-71)|https://en.wikipedia.org/wiki/BGM-71_TOW">TOW BGM-71 — 3,6 kg NEQ</option>
+          <option value="2.7|1|FGM-148 Javelin|https://en.wikipedia.org/wiki/FGM-148_Javelin">FGM-148 Javelin — 2,7 kg NEQ</option>
+          <option value="2.4|1|MILAN|https://en.wikipedia.org/wiki/MILAN">MILAN — 2,4 kg NEQ</option>
+          <option value="8|1|AGM-114 Hellfire|https://en.wikipedia.org/wiki/AGM-114_Hellfire">AGM-114 Hellfire — 8 kg NEQ</option>
+        </optgroup>
+        <optgroup label="MANPADS / tierra-aire">
+          <option value="1.15|1|9K32 Strela-2 (SA-7)|https://en.wikipedia.org/wiki/9K32_Strela-2">9K32 Strela-2 (SA-7) — 1,15 kg NEQ</option>
+          <option value="1.2|1|9K38 Igla (SA-18)|https://en.wikipedia.org/wiki/9K38_Igla">9K38 Igla (SA-18) — 1,2 kg NEQ</option>
+          <option value="3|1|FIM-92 Stinger|https://en.wikipedia.org/wiki/FIM-92_Stinger">FIM-92 Stinger — 3 kg NEQ</option>
+        </optgroup>
+        <optgroup label="Misiles europeos">
+          <option value="1.4|1|IRIS-T (A/A / S/LM)|https://en.wikipedia.org/wiki/IRIS-T">IRIS-T — 1,4 kg NEQ</option>
+          <option value="0.9|1|IRIS-T SL (tierra-aire)|https://en.wikipedia.org/wiki/IRIS-T">IRIS-T SL — 900 g NEQ</option>
+          <option value="13|1|AIM-132 ASRAAM|https://en.wikipedia.org/wiki/AIM-132_ASRAAM">AIM-132 ASRAAM — 13 kg NEQ</option>
+          <option value="63|1|MBDA Meteor|https://en.wikipedia.org/wiki/Meteor_(missile)">Meteor — 63 kg NEQ</option>
+          <option value="16|1|MICA (EM/IR)|https://en.wikipedia.org/wiki/MICA_(missile)">MICA — 16 kg NEQ</option>
+        <optgroup label="Misiles aire-tierra / crucero">
+          <option value="4.7|1|AIM-9 Sidewinder|https://en.wikipedia.org/wiki/AIM-9_Sidewinder">AIM-9 Sidewinder — 4,7 kg NEQ</option>
+          <option value="20|1|AIM-120 AMRAAM|https://en.wikipedia.org/wiki/AIM-120_AMRAAM">AIM-120 AMRAAM — 20 kg NEQ</option>
+          <option value="3.5|1|R-60|https://en.wikipedia.org/wiki/R-60_(missile)">R-60 — 3,5 kg NEQ</option>
+          <option value="7.4|1|R-73|https://en.wikipedia.org/wiki/R-73_(missile)">R-73 — 7,4 kg NEQ</option>
+        </optgroup>
+        <optgroup label="Misiles aire-tierra / crucero">
+          <option value="57|1|AGM-65 Maverick|https://en.wikipedia.org/wiki/AGM-65_Maverick">AGM-65 Maverick — 57 kg NEQ</option>
+          <option value="320|1|Kh-29|https://en.wikipedia.org/wiki/Kh-29">Kh-29 — 320 kg NEQ</option>
+          <option value="450|1|BGM-109 Tomahawk|https://en.wikipedia.org/wiki/BGM-109_Tomahawk">BGM-109 Tomahawk — 450 kg NEQ</option>
+          <option value="450|1|Storm Shadow / SCALP-EG|https://en.wikipedia.org/wiki/Storm_Shadow">Storm Shadow — 450 kg NEQ</option>
+        </optgroup>
+        <optgroup label="Munición para drones / FPV">
+          <option value="0.11|1|RGD-5 lanzada por dron|https://en.wikipedia.org/wiki/RGD-5">RGD-5 por dron — 110 g NEQ</option>
+          <option value="0.22|1|Carga OG-7V en FPV|https://en.wikipedia.org/wiki/RPG-7">FPV con OG-7V — 220 g NEQ</option>
+          <option value="0.36|1|FPV con carga PG-7V|https://en.wikipedia.org/wiki/RPG-7">FPV con PG-7V — 360 g NEQ</option>
+        </optgroup>
+      </select>
+      <label for="frag2">Metralla / fragmentación</label>
+      <select id="frag2">
+        <option value="1">Con metralla</option>
+        <option value="0">Sin metralla (solo onda expansiva)</option>
+      </select>
+      <div class="info" id="uxoInfo">Selecciona munición: se fija automáticamente la NEQ (TNT eq.) y la metralla. Amplía el catálogo con las bases de datos de acceso libre amonio.es y cat-uxo.com.</div>
+      <button class="gpsBtn gray" id="refBtn" type="button">🔗 Ver ficha e imagen de esta munición</button>
     </div>
-  </section>
 
-  <!-- 05 · INFORME -->
-  <section class="panel" id="p5">
-    <h2><span class="idx">05</span> INFORME</h2>
-    <div class="row">
-      <button class="btn primary" id="btnInforme">🖨 Generar informe imprimible / PDF</button>
-      <button class="btn" id="btnInformeTxt">⬇ Descargar informe (.txt)</button>
+    <label>Peso de carga (kg TNT eq.)</label>
+    <input id="kg" type="number" step="0.05" min="0.01" value="1">
+
+    <label>Unidades</label>
+    <div class="seg">
+      <button id="uM" class="on" type="button">kg · m</button>
+      <button id="uI" type="button">lb · ft</button>
     </div>
-  </section>
-
-  <!-- 06 · AJUSTES -->
-  <section class="panel" id="p6">
-    <h2><span class="idx">06</span> AJUSTES</h2>
-    <div class="grid">
-      <div><label>K — Fragmentación</label><input type="number" id="kFrag" value="30" step="0.1"></div>
-      <div><label>K — Onda de choque</label><input type="number" id="kOnda" value="8" step="0.1"></div>
-      <div><label>K — Daño mínimo (Z = 18)</label><input type="number" id="kDan" value="18" step="0.1"></div>
-      <div><label>K — Perímetro de seguridad (15,4)</label><input type="number" id="kSeg" value="15.4" step="0.1"></div>
-      <div><label>Capa base por defecto</label>
-        <select id="setCapa"><option value="mapa">Mapa</option><option value="satelite">Satélite</option></select>
-      </div>
-      <div><label>Precisión MGRS (dígitos)</label>
-        <select id="setPrec"><option>5</option><option selected>4</option><option>3</option><option>2</option></select>
-      </div>
-    </div>
-    <div class="row" style="margin-top:12px">
-      <button class="btn" id="btnGuardarAjustes">💾 Guardar ajustes</button>
-      <button class="btn danger" id="btnBorrarTodo">🗑 Borrar todos los datos locales</button>
-    </div>
-  </section>
-
-  <!-- 07 · FICHAS GUARDADAS -->
-  <section class="panel" id="p7">
-    <h2><span class="idx">07</span> FICHAS GUARDADAS</h2>
-    <div class="row" style="margin-bottom:12px">
-      <button class="btn primary" id="btnGuardarFicha">💾 Guardar ficha actual</button>
-      <button class="btn" id="btnNuevaFicha">＋ Nueva ficha</button>
-    </div>
-    <div id="listaFichas"><p style="color:var(--muted);font-size:12px">Sin fichas guardadas.</p></div>
-  </section>
-
-</main>
-
-<footer>
-  <button class="btn" id="btnREADME">📖 INSTRUCCIONES DE EMPLEO — COMANDO README</button>
-  <p style="margin-top:12px">PERIMETER GPS · Repositorio <b>DISEGES</b> · Las instrucciones completas están en el archivo <b>README.md</b> del repositorio.</p>
-</footer>
-
-<!-- MODAL README -->
-<div class="modal" id="readmeModal">
-  <div class="box">
-    <h2>📖 INSTRUCCIONES DE EMPLEO (README.md)</h2>
-    <pre>1. FICHA (01): crea el expediente, introduce FECHA y HORA MANUALMENTE y anota observaciones.
-2. AMENAZA (02): selecciona el tipo de artefacto e introduce el peso del explosivo W (kg TNT).
-3. MAPA (03): pulsa sobre el mapa para colocar la amenaza. Se dibujan los círculos de radios
-   en el color y el orden de la leyenda; el perímetro de fragmentación se dibuja CONTINUO.
-   La leyenda está fuera del mapa y puede ocultarse (nunca se superpone al mapa).
-4. PANTALLA COMPLETA: botón «⛶ Pantalla completa» (Fullscreen API; en iOS/Safari se usa el
-   modo alternativo a pantalla completa). Sal con «✕ Salir de pantalla completa».
-5. COORDENADAS (04): consulta lat/lon y MGRS de la amenaza y de tu GPS, la distancia entre
-   ambos y los avisos de ZONA DE PELIGRO (mayúsculas, rojo).
-6. INFORME (05): genera el informe imprimible/PDF con todos los datos o descárgalo en .txt.
-7. AJUSTES (06): modifica los factores K, la capa base y la precisión MGRS.
-8. FICHAS (07): guarda, carga o elimina expedientes (se almacenan en tu dispositivo).
-
-Comando de acceso a estas instrucciones en la app: botón «README» del pie de página.
-En el repositorio DISEGES: abre el archivo README.md.</pre>
-    <div class="row" style="margin-top:16px"><button class="btn primary" id="btnCerrarReadme">Cerrar</button></div>
   </div>
+
+  <div class="panel">
+    <h2>02 · Distancias calculadas</h2>
+    <table id="tbl">
+      <thead><tr><th>Radio</th><th id="thM">Distancia</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="info">Radios con distancias escaladas Z (K = 15,4 m/kg^⅓). Daño auditivo mínimo calculado con K = 18.</div>
+  </div>
+
 </div>
+<div>
 
-<!-- ================= 07 · INSTRUCCIONES DE EMPLEO (guía embebida, sin red ni README) ================= -->
-  <section class="panel" id="pInstrucciones">
-    <h2><span class="idx">07</span> INSTRUCCIONES DE EMPLEO</h2>
-    <button class="btn primary" id="btnInstrucciones" style="width:100%">📖 Ver instrucciones de empleo</button>
-    <div id="guiaInstrucciones" hidden style="display:none; margin-top:12px; background:#1E2330; border:1px solid #2E3547; border-radius:10px; padding:14px;">
-      <pre id="guiaTexto" style="margin:0; white-space:pre-wrap; font-family:'IBM Plex Mono',monospace; font-size:12.5px; line-height:1.65; color:#E8ECF4;">GUÍA RÁPIDA DE EMPLEO — PERIMETER GPS
-
-1. FICHA: crea o carga un expediente; introduce FECHA y HORA manualmente.
-2. AMENAZA (02): selecciona el tipo (IED / UXO / granada / mortero / artillería) y el peso del explosivo W en kg TNT.
-3. DISTANCIAS: la app calcula automáticamente los radios de FRAGMENTACIÓN, ONDA DE CHOQUE, DAÑO MÍNIMO (K=18) y SEGURIDAD (K=15,4).
-4. MAPA (03): pulsa sobre el mapa para fijar la AMENAZA; se dibujan los círculos de radios con el color y el orden de la leyenda (perímetro de fragmentación en línea continua roja). Marca también el PCI y el PCEOD.
-5. COORDENADAS (04): consulta lat/lon y MGRS de la amenaza, PCI y PCEOD, las distancias entre ellos y los avisos de ZONA DE PELIGRO (en MAYÚSCULAS y en ROJO).
-6. INFORME (05): genera el informe imprimible/PDF con todos los datos o descárgalo en .txt.
-7. AJUSTES: modifica los factores K, la capa base (Mapa/Satélite) y la precisión MGRS.
-
-AVISO: herramienta de EMPLEO ORIENTATIVO. No sustituye los procedimientos ni la doctrina EOD oficiales.</pre>
+  <div class="panel">
+    <h2>03 · Mapa real · perímetros</h2>
+    <button class="gpsBtn" id="gpsBtn" type="button">◎ Activar mi posicionamiento GPS</button>
+    <div id="map" style="margin-top:10px"></div>
+    <div class="legend">
+      <span><i class="dot" style="background:#FF3B30"></i> Onda de choque — letal (≈35 kPa)</span>
+      <span><i class="dot" style="background:#FF9F0A"></i> Onda de choque — daño mínimo (K = 18)</span>
+      <span><i class="dot" style="background:#FFD60A"></i> Fragmentación — personal al descubierto</span>
+      <span><i class="dot" style="background:#30D158"></i> Zona de exclusión / desalojo — rotura de cristales</span>
+      <span><i class="dot dash" style="border:2px dashed #B9C4CC;background:transparent"></i> Daño estructural — círculos discontinuos (madera / ladrillo / hormigón)</span>
+      <span><i class="dot" style="background:#1D4E89"></i> Tu posición (GPS en tiempo real)</span>
+      <span><i class="dot" style="background:var(--red);border-radius:2px"></i> Amenaza (roja) · <b style="color:var(--blue)">PCI</b> · <b style="color:var(--green)">EOD</b></span>
     </div>
-    <script>
-    (function(){
-      var b=document.getElementById('btnInstrucciones'), g=document.getElementById('guiaInstrucciones');
-      if(!b||!g) return;
-      b.addEventListener('click',function(){
-        var visible = !g.hidden;
-        g.hidden = visible;
-        g.style.display = visible ? 'none' : 'block';
-        b.textContent = visible ? '📖 Ver instrucciones de empleo' : '📕 Ocultar instrucciones';
-        if(!visible){ g.scrollIntoView({behavior:'smooth', block:'start'}); }
-      });
-    })();
-    </script>
-  </section>
+    <label style="margin-top:12px">Control de amenaza y puntos</label>
+    <button class="gpsBtn" id="btnPlace" type="button" style="margin-top:0">📍 Posicionar en mapa amenaza</button>
+    <button class="gpsBtn" id="btnFix" type="button" disabled>✅ Fijar amenaza actual</button>
+    <button class="gpsBtn gray" id="btnDel" type="button" disabled>🗑 Borrar amenaza</button>
+    <button class="gpsBtn gray" id="btnPci" type="button">🚩 Punto de control de incidente (PCI)</button>
+    <button class="gpsBtn gray" id="btnEod" type="button">⛑ Punto de control EOD (PCEOD)</button>
+    <button class="gpsBtn gray" id="btnDelPci" type="button" disabled>🗑 Borrar PCI</button>
+    <button class="gpsBtn gray" id="btnDelEod" type="button" disabled>🗑 Borrar PCEOD</button>
+    <div class="info" id="mapInfo">Toca «Posicionar en mapa amenaza» y luego toca el mapa. Podrás arrastrar el punto hasta pulsar «Fijar amenaza actual». PCI y PCEOD se colocan igual.</div>
+  </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <div class="panel">
+    <h2>04 · Coordenadas y exposición</h2>
+    <div class="coordBox" id="coords">Sin amenazas colocadas todavía.</div>
+  </div>
+
+  <div class="panel">
+    <h2>05 · Registro de incidentes</h2>
+    <div id="logBox" class="coordBox">Sin incidentes guardados todavía en esta sesión.</div>
+  </div>
+
+  <div class="panel">
+    <h2>06 · Generar informe</h2>
+    <button class="gpsBtn" id="pdfBtn" type="button" style="background:var(--red);color:#fff">📄 Generar informe PDF (con captura del mapa)</button>
+    <div class="info" id="pdfBox">El PDF incluye: amenazas con coordenadas y NEQ, tabla de radios, PCI, PCEOD, tu exposición, registro de incidentes e imagen insertada de la captura del mapa.</div>
+  </div>
+
+  <div class="panel">
+    <h2>07 · Instrucciones de empleo</h2>
+    <button class="gpsBtn gray" id="helpBtn" type="button">📖 Ver instrucciones de empleo</button>
+    <div id="helpBox" class="coordBox" style="display:none">
+<b>1 · Amenaza</b> — Elige IED (contenedor + explosivo supuesto + peso en kg TNT eq.) o UXO (catálogo de municiones; NEQ y metralla se fijan solos). Botón «Ver ficha e imagen» abre la referencia visual.
+
+<b>2 · Distancias</b> — Tabla de radios con distancias escaladas Z (K = 15,4 m/kg^⅓; daño mínimo K = 18): onda de choque letal y daño mínimo, daño estructural (madera/ladrillo/hormigón), fragmentación y zona de exclusión por cristales. Unidades kg·m / lb·ft conmutables.
+
+<b>3 · Mapa</b> — Activa tu GPS, pulsa «Posicionar en mapa amenaza» y toca el mapa; arrastra el punto y confirma con «Fijar amenaza actual» (o bórrala). PCI y PCEOD se colocan igual.
+
+<b>4 · Coordenadas y exposición</b> — Coordenadas de amenazas, PCI y PCEOD; tu distancia a cada amenaza y si estás dentro de algún radio.
+
+<b>5 · Registro</b> — Cada amenaza fijada se anota con hora, coordenadas y munición. Editable y borrable línea a línea.
+
+<b>6 · Informe</b> — «Generar informe PDF» crea el informe con captura del mapa, amenazas, radios, puntos de control y registro.
+
+⚠️ Herramienta de apoyo orientativo para personal formado en EOD; no sustituye los SOP ni la evaluación de un especialista cualificado.
+    </div>
+  </div>
+
+</div>
+</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
-"use strict";
-/* ================= ALMACENAMIENTO SEGURO (shim con fallback en memoria) =================
-   Cuando el archivo se sirve desde el repositorio DISEGES usa el almacenamiento persistente
-   del navegador; si no está disponible, cae a memoria de sesión para que la app nunca falle. */
-const MEMSTORE={};
-const LS={
-  get(k){ try{ return window['local'+'Storage'].getItem(k); }catch(e){ return (k in MEMSTORE)?MEMSTORE[k]:null; } },
-  set(k,v){ try{ window['local'+'Storage'].setItem(k,v); }catch(e){ MEMSTORE[k]=v; } },
-  del(k){ try{ window['local'+'Storage'].removeItem(k); }catch(e){ delete MEMSTORE[k]; } }
-};
-
-/* ================= ESTADO ================= */
-const S = {
-  amenaza:null,        // {lat,lng}
-  gps:null,            // {lat,lng,acc}
-  circulos:[], marcador:null, userMarker:null,
-  distancias:null,     // {frag,onda,dan,seg}
-};
-const $=id=>document.getElementById(id);
-
-/* ================= MAPA ================= */
-const map = L.map('map',{zoomControl:true}).setView([40.4168,-3.7038],13);
-const capaMapa = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
-const capaSat  = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© Esri'});
-const baseMaps = {"Mapa":capaMapa,"Satélite":capaSat};
-capaMapa.addTo(map);
-L.control.layers(baseMaps,null,{position:'bottomright'}).addTo(map);
-
-map.on('click', e=>colocarAmenaza(e.latlng));
-
-/* ================= CÁLCULOS IED/UXO ================= */
-const K = ()=>{
-  return{
-  frag: parseFloat($('kFrag').value)||30,
-  onda: parseFloat($('kOnda').value)||8,
-  dan:  parseFloat($('kDan').value)||18,
-  seg:  parseFloat($('kSeg').value)||15.4
-  };
-};
-
-function calcularDistancias(){
-  const w = parseFloat($('tPeso').value)||1, k=K(), r=Math.cbrt(w);
-  return { frag:k.frag*r, onda:k.onda*r, dan:k.dan*r, seg:k.seg*r };
-}
-
-/* Colores y ORDEN idénticos a la leyenda: 1 frag(rojo, continuo) 2 onda(naranja) 3 daño mínimo(amarillo) 4 seguridad(verde) */
-const PERIMETROS = [
-  {key:'frag', n:1, nombre:'PERÍMETRO DE FRAGMENTACIÓN', color:'#FF3B30', fill:.22, continuo:true},
-  {key:'onda', n:2, nombre:'ONDA DE CHOQUE',             color:'#FFA940', fill:.14},
-  {key:'dan',  n:3, nombre:'ZONA DE PELIGRO · DAÑO MÍNIMO (K=18)', color:'#FFD60A', fill:.10},
-  {key:'seg',  n:4, nombre:'PERÍMETRO DE SEGURIDAD (K=15,4)',      color:'#4ADE80', fill:.10},
+const cont=document.getElementById('cont'),exp=document.getElementById('exp'),
+kg=document.getElementById('kg'),
+iedSec=document.getElementById('iedSec'),uxoSec=document.getElementById('uxoSec'),
+mIed=document.getElementById('mIed'),mUxo=document.getElementById('mUxo'),
+tbl=document.querySelector('#tbl tbody'),
+uM=document.getElementById('uM'),uI=document.getElementById('uI'),
+gpsBtn=document.getElementById('gpsBtn'),
+btnPlace=document.getElementById('btnPlace'),btnFix=document.getElementById('btnFix'),
+btnDel=document.getElementById('btnDel'),btnPci=document.getElementById('btnPci'),btnEod=document.getElementById('btnEod'),
+btnDelPci=document.getElementById('btnDelPci'),btnDelEod=document.getElementById('btnDelEod'),
+mapInfo=document.getElementById('mapInfo'),coordsBox=document.getElementById('coords'),
+logBox=document.getElementById('logBox'),pdfBtn=document.getElementById('pdfBtn'),pdfBox=document.getElementById('pdfBox'),
+helpBtn=document.getElementById('helpBtn'),helpBox=document.getElementById('helpBox');
+if(helpBtn){helpBtn.onclick=()=>{const open=helpBox.style.display==='none';helpBox.style.display=open?'':'none';helpBtn.textContent=open?'📕 Ocultar instrucciones de empleo':'📖 Ver instrucciones de empleo';if(open)helpBox.scrollIntoView({behavior:'smooth',block:'nearest'});};}
+let mode='ied',units='metric',fragVal='1',wkg=1;
+const LB=2.20462,IMP=2.52;
+const RANGES=[
+ [3,'#FF3B30','Onda de choque — letal (≈35 kPa)',0],
+ [18,'#FF9F0A','Onda de choque — daño mínimo (K = 18)',0],
+ [5.5,'#B9C4CC','Daño estructural — madera (≈1 psi)',1],
+ [4,'#8FA3B0','Daño estructural — ladrillo (≈2 psi)',1],
+ [2.9,'#5E7383','Daño estructural — hormigón (≈4–5 psi)',1]
 ];
-
-function dibujarPerimetros(){
-  S.circulos.forEach(c=>map.removeLayer(c)); S.circulos=[];
-  if(!S.amenaza||!S.distancias) return;
-  PERIMETROS.forEach(p=>{
-    const r=S.distancias[p.key];
-    if(!(r>0)) return;
-    const c=L.circle([S.amenaza.lat,S.amenaza.lng],{
-      radius:r, color:p.color, weight:p.continuo?3:2,
-      fill:true, fillColor:p.color, fillOpacity:p.fill,
-      dashArray:null                     // SIN discontinuidad: perímetro de fragmentación dibujado CONTINUO
-    }).addTo(map).bindTooltip(`${p.n} · ${p.nombre} — ${fmt(r)} m`,{sticky:true});
-    S.circulos.push(c);
+function Z(v){return v}
+function W(){return Math.max(.05,wkg*(mode==='ied'?+exp.value:(document.getElementById('uo2').value.split('|')[1]==='1'?1:1)))}
+function frag(){return mode==='ied'?1:(document.getElementById('frag2').value==='1'?1:0)}
+function radii(){
+  const w=W(),c=Math.cbrt(w),f=frag();
+  let out=RANGES.map(r=>({col:r[1],lbl:r[2],r:r[0]*c,sec:!!r[3]}));
+  const rf=f===1?140*c:Math.max(out[0].r,6*c);
+  out.splice(2,0,{col:'#FFD60A',lbl:'Fragmentación — personal al descubierto',r:rf,sec:false},{col:'#30D158',lbl:'Zona de exclusión / desalojo — rotura de cristales',r:45*c,sec:false});
+  return{out,w,draw:[...out].sort((a,b)=>b.r-a.r)};
+}
+function fmt(m){return units==='metric'?(m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m'):Math.round(m*3.28084)+' ft'}
+function syncKg(){kg.value=units==='metric'?(+wkg).toFixed(3):(wkg*LB).toFixed(2)}
+/* ---- UI ---- */
+mIed.onclick=()=>{mode='ied';mIed.classList.add('on');mUxo.classList.remove('on');iedSec.style.display='';uxoSec.style.display='none';update()};
+mUxo.onclick=()=>{mode='uxo';mUxo.classList.add('on');mIed.classList.remove('on');uxoSec.style.display='';iedSec.style.display='none';update()};
+uM.onclick=()=>{if(units==='metric')return;units='metric';uM.classList.add('on');uI.classList.remove('on');document.getElementById('thM').textContent='Distancia';syncKg();update()};
+uI.onclick=()=>{if(units==='imperial')return;units='imperial';uI.classList.add('on');uM.classList.remove('on');document.getElementById('thM').textContent='Distance';syncKg();update()};
+kg.oninput=()=>{wkg=units==='metric'?Math.max(.01,+kg.value||1):Math.max(.01,(+kg.value||1)/LB);update()};
+document.getElementById('uo2').onchange=()=>{
+  if(!document.getElementById('uo2').value)return;
+  const v=document.getElementById('uo2').value.split('|');
+  wkg=+v[0];document.getElementById('frag2').value=v[1];
+  syncKg();update();
+  document.getElementById('uxoInfo').innerHTML='<b style="color:var(--ink)">'+v[2]+'</b><br>Tipo de explosivo: TNT (militar) · Metralla: '+(v[1]==='1'?'sí':'no')+' · NEQ: '+wkg+' kg';
+};
+document.getElementById('refBtn').onclick=()=>{
+  const v=document.getElementById('uo2').value.split('|');
+  if(v[3])window.open(v[3],'_blank');
+  else document.getElementById('uxoInfo').innerHTML='Sin ficha de referencia disponible para esta munición.';
+};
+document.getElementById('cont').onchange=()=>{if(!cont.value)return;const v=cont.value.split('|');wkg=+v[0];fragVal=v[1];syncKg();update()};
+document.getElementById('exp').onchange=()=>{document.getElementById('expInfo').innerHTML='Factor NEQ aplicado: <b style="color:var(--ink)">'+exp.selectedOptions[0].text+'</b>. Radios calculados con el equivalente TNT.';update()};
+/* ---- Mapa ---- */
+const map=L.map('map').setView([40.4168,-3.7038],12);
+const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,crossOrigin:'anonymous',attribution:'© Colaboradores de OpenStreetMap'});
+const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,crossOrigin:'anonymous',attribution:'Esri, Maxar, Earthstar Geographics'});
+osm.addTo(map);
+L.control.layers({'🗺 Mapa':osm,'🛰 Satélite':sat},null,{position:'topleft'}).addTo(map);
+const personIcon=L.divIcon({className:'',html:'<svg width="22" height="30" viewBox="0 0 22 30"><circle cx="11" cy="5.5" r="4.2" fill="#1D4E89"/><path d="M11 10.5 C6.5 10.5 5.5 15 5.5 19.5 L9 19.5 L9 29 L13 29 L13 19.5 L16.5 19.5 C16.5 15 15.5 10.5 11 10.5" fill="#1D4E89"/></svg>',iconSize:[22,30],iconAnchor:[11,29]});
+const threatIcon=L.divIcon({className:'',html:'<div style="width:20px;height:20px;background:var(--red);border:2px solid #fff;border-radius:4px;box-shadow:0 0 10px rgba(255,59,48,.8)"></div>',iconSize:[20,20],iconAnchor:[10,10]});
+function tagIcon(txt,cls){return L.divIcon({className:'',html:'<div class="tagIco '+(cls||'')+'">'+txt+'</div>',iconSize:[52,24],iconAnchor:[26,12]})}
+let uMarker=null,threats=[],active=null,pci=null,pceod=null,placing=null,watchId=null;
+function addCircles(ll,list){
+  return radii().draw.map(r=>{
+    const isFrag=r.lbl.indexOf('Fragmentación')>=0;
+    return L.circle(ll,{radius:r.r,color:r.col,weight:isFrag?3:2.5,opacity:.95,dashArray:r.sec?'7 6':null,fill:true,fillColor:r.col,fillOpacity:isFrag?.14:.07,interactive:false});
   });
-  actualizarTabla();
-  actualizarAvisos();
 }
-
-function colocarAmenaza(latlng){
-  S.amenaza={lat:latlng.lat,lng:latlng.lng};
-  if(S.marcador) map.removeLayer(S.marcador);
-  S.marcador=L.marker([latlng.lat,latlng.lng],{icon:L.divIcon({
-    className:'', html:'<div style="width:16px;height:16px;background:#FF3B30;border:2px solid #fff;border-radius:50%;box-shadow:0 0 10px #FF3B30"></div>', iconSize:[16,16], iconAnchor:[8,8]
-  })}).addTo(map).bindTooltip('AMENAZA',{permanent:true,direction:'top'});
-  S.distancias=calcularDistancias();
-  dibujarPerimetros();
-  const p=proj(latlng.lat,latlng.lng,prec());
-  $('cAmenaza').textContent=`${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
-  $('cMGRS').textContent=p;
-  if(S.gps) calcDistGPS();
+function clearCircles(cs){cs.forEach(c=>c.remove())}
+function drawThreat(t){
+  clearCircles(t.circles);
+  t.circles=addCircles(t.latlng).map(c=>c.addTo(map));
+  t.marker.setLatLng(t.latlng);
 }
-
-/* ================= TABLA RADIOS ================= */
-function actualizarTabla(){
-  const t=$('tablaRadios'); t.innerHTML='';
-  const kmap={frag:'Frag',onda:'Onda',dan:'Dan',seg:'Seg'};
-  PERIMETROS.forEach(p=>{
-    const r=S.distancias[p.key];
-    const kId='k'+kmap[p.key];
-    t.insertAdjacentHTML('beforeend',
-      `<tr><td style="color:${p.color};font-weight:700">${p.n}</td><td>${p.nombre}</td><td class="num">${(parseFloat($(kId).value)).toLocaleString('es-ES')}</td><td class="num" style="color:${p.color}">${fmt(r)} m</td></tr>`);
-  });
+function setThreat(ll){
+  if(active){clearCircles(active.circles);active.marker.remove();}
+  const label='A'+(threats.length+1);
+  const marker=L.marker(ll,{icon:tagIcon(label,'thr'),draggable:true}).addTo(map);
+  active={latlng:ll,marker,circles:[],label:label};
+  marker.on('dragend',e=>{active.latlng=e.target.getLatLng();drawThreat(active);refreshCoords();});
+  drawThreat(active);
+  const maxR=radii().out[0].r;
+  map.fitBounds(L.latLng(ll).toBounds(maxR*2.4));
+  btnFix.disabled=false;btnDel.disabled=false;
+  mapInfo.textContent='Amenaza colocada (arrastrable). Pulsa «Fijar amenaza actual» para confirmarla, o «Borrar amenaza» para eliminarla.';
+  refreshCoords();
 }
-const fmt=n=>n>=1000?(n/1000).toFixed(2)+' km':n.toFixed(1);
-
-/* ================= GPS ================= */
-let gpsWatch=null;
-$('gpsChip').addEventListener('click',toggleGPS);
-function toggleGPS(){
-  if(gpsWatch){navigator.geolocation.clearWatch(gpsWatch); gpsWatch=null; $('gpsChip').classList.remove('on'); $('gpsChipTxt').textContent='GPS OFF'; return;}
-  if(!navigator.geolocation){alert('GPS no disponible');return;}
-  gpsWatch=navigator.geolocation.watchPosition(pos=>{
-    S.gps={lat:pos.coords.latitude,lng:pos.coords.longitude,acc:pos.coords.accuracy};
-    $('gpsChip').classList.add('on'); $('gpsChipTxt').textContent='GPS ACTIVO';
-    $('cGPS').textContent=`${S.gps.lat.toFixed(6)}, ${S.gps.lng.toFixed(6)} (±${Math.round(S.gps.acc)} m)`;
-    $('cGPSMGRS').textContent=proj(S.gps.lat,S.gps.lng,prec());
-    if(!S.userMarker) S.userMarker=L.circleMarker([S.gps.lat,S.gps.lng],{radius:7,color:'#4ADE80',fillColor:'#4ADE80',fillOpacity:.9}).addTo(map).bindTooltip('TÚ');
-    else S.userMarker.setLatLng([S.gps.lat,S.gps.lng]);
-    calcDistGPS();
-  },err=>{$('gpsChipTxt').textContent='GPS ERROR';},{enableHighAccuracy:true,maximumAge:2000});
-}
-function calcDistGPS(){
-  if(!S.gps||!S.amenaza){$('cDist').textContent='—';return;}
-  const d=map.distance([S.gps.lat,S.gps.lng],[S.amenaza.lat,S.amenaza.lng]);
-  $('cDist').textContent=fmt(d);
-  actualizarAvisos(d);
-}
-
-/* ================= AVISOS ZONAS DE PELIGRO — MAYÚSCULAS Y ROJO ================= */
-function actualizarAvisos(d){
-  const dz=$('dangerZone'); dz.innerHTML='';
-  if(!S.amenaza||!S.distancias){dz.innerHTML='<p style="color:var(--muted);font-size:12px">Coloca la amenaza para evaluar la zona de peligro.</p>';return;}
-  let pos=null;
-  if(d!==undefined) pos=d; else if(S.gps) pos=map.distance([S.gps.lat,S.gps.lng],[S.amenaza.lat,S.amenaza.lng]);
-  const msg=[];
-  if(pos===null){
-    msg.push('ACTIVA EL GPS O INTRODUCE LA AMENAZA PARA EVALUAR TU POSICIÓN RESPECTO A LOS PERÍMETROS DE PELIGRO.');
-  }else if(pos<=S.distancias.frag){
-    msg.push('¡PELIGRO EXTREMO! ESTÁS DENTRO DEL PERÍMETRO DE FRAGMENTACIÓN. ¡ABANDONA INMEDIATAMENTE LA ZONA EN DIRECCIÓN OPUESTA A LA AMENAZA!');
-  }else if(pos<=S.distancias.onda){
-    msg.push('¡PELIGRO! ESTÁS DENTRO DE LA ZONA DE ONDA DE CHOQUE. RIESGO DE SOBREPRESIÓN. ALEJATE DEL PERÍMETRO DE FRAGMENTACIÓN.');
-  }else if(pos<=S.distancias.dan){
-    msg.push('¡ATENCIÓN! ESTÁS DENTRO DE LA ZONA DE PELIGRO · DAÑO MÍNIMO (K=18). NO TE APROXIMES AL PERÍMETRO DE FRAGMENTACIÓN.');
-  }else if(pos<=S.distancias.seg){
-    msg.push('¡PRECAUCIÓN! ESTÁS DENTRO DEL PERÍMETRO DE SEGURIDAD (K=15,4). MANTENTE FUERA Y NO CRUCES LA LÍNEA VERDE.');
-  }else{
-    dz.innerHTML='<p class="safe">✔ FUERA DE TODOS LOS PERÍMETROS DE PELIGRO. SITUACIÓN SEGURA.</p>';return;
-  }
-  msg.forEach(m=>dz.insertAdjacentHTML('beforeend',`<p class="danger">⚠ ${m}</p>`));
-}
-
-/* ================= MGRS ================= */
-function prec(){return parseInt($('setPrec').value)||4;}
-function proj(lat,lon,pr){
-  const a=6378137.0,f=1/298.257223563,k0=0.9996,e2=2*f-f*f,ep2=e2/(1-e2);
-  const zone=Math.floor((lon+180)/6)+1, lon0=((zone-1)*6-180+3)*Math.PI/180;
-  const la=lat*Math.PI/180, lo=lon*Math.PI/180;
-  const N=a/Math.sqrt(1-e2*Math.sin(la)**2), T=Math.tan(la)**2, C=ep2*Math.cos(la)**2;
-  const A=Math.cos(la)*(lo-lon0);
-  const M=a*((1-e2/4-3*e2**2/64-5*e2**3/256)*la-(3*e2/8+3*e2**2/32+45*e2**3/1024)*Math.sin(2*la)
-    +(15*e2**2/256+45*e2**3/1024)*Math.sin(4*la)-(35*e2**3/3072)*Math.sin(6*la));
-  let E=k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep2)*A**5/120)+500000;
-  let No=k0*(M+N*Math.tan(la)*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep2)*A**6/720));
-  if(lat<0) No+=10000000;
-  const set=(zone-1)%6;
-  const eCols=[['A','B','C','D','E','F','G','H'],['J','K','L','M','N','P','Q','R'],['S','T','U','V','W','X','Y','Z']];
-  const rows='ABCDEFGHJKLMNPQRSTUV';
-  const col=eCols[set%3][Math.floor(E/100000)-1];
-  const row=rows[(Math.floor(No/100000)+(set%2?0:5))%20];
-  const p=Math.pow(10,5-pr);
-  const ee=Math.floor(E%p), nn=Math.floor(No%p);
-  return `${zone}${'CDEFGHJKLMNPQRSTUVWX'[Math.floor(Math.max(-80,Math.min(79,lat))/8)+10]} ${col}${row} ${String(ee).padStart(pr,'0')} ${String(nn).padStart(pr,'0')}`;
-}
-
-/* ================= PANTALLA COMPLETA (Fullscreen API + fallback iOS/Safari) ================= */
-const mapWrap=$('mapWrap');
-function entrarFS(){
-  if(mapWrap.requestFullscreen) mapWrap.requestFullscreen();
-  else if(mapWrap.webkitRequestFullscreen) mapWrap.webkitRequestFullscreen();
-  else mapWrap.classList.add('fs-fallback');           // fallback iOS/Safari
-  setTimeout(()=>map.invalidateSize(),150);
-}
-function salirFS(){
-  if(document.fullscreenElement) document.exitFullscreen();
-  else if(document.webkitFullscreenElement) document.webkitExitFullscreen();
-  mapWrap.classList.remove('fs-fallback');
-  setTimeout(()=>map.invalidateSize(),150);
-}
-$('btnFs').addEventListener('click',entrarFS);
-$('btnFs2').addEventListener('click',entrarFS);
-$('fsExit').addEventListener('click',salirFS);
-['fullscreenchange','webkitfullscreenchange'].forEach(ev=>document.addEventListener(ev,()=>{
-  const fs=document.fullscreenElement||document.webkitFullscreenElement;
-  if(!fs) mapWrap.classList.remove('fs-fallback');
-  setTimeout(()=>map.invalidateSize(),100);
-}));
-$('btnCentrar').addEventListener('click',()=>{ if(S.gps) map.setView([S.gps.lat,S.gps.lng],15); else alert('Activa el GPS primero (chip GPS OFF).'); });
-
-/* ================= LEYENDA PLEGABLE ================= */
-$('legendHead').addEventListener('click',()=>{
-  const lp=$('legendPanel'); lp.classList.toggle('collapsed');
-  $('legendToggle').textContent=lp.classList.contains('collapsed')?'MOSTRAR ▼':'OCULTAR ▲';
-});
-
-/* ================= FICHAS (almacenamiento del dispositivo) ================= */
-const LSK='perimetergps_fichas', LSA='perimetergps_ajustes';
-function guardarAjustes(){
-  LS.set(LSA,JSON.stringify({
-    kFrag:$('kFrag').value,kOnda:$('kOnda').value,kDan:$('kDan').value,kSeg:$('kSeg').value,
-    capa:$('setCapa').value,prec:$('setPrec').value}));
-  alert('Ajustes guardados.');
-  if(S.amenaza){S.distancias=calcularDistancias();dibujarPerimetros();}
-}
-function cargarAjustes(){
-  try{
-    const a=JSON.parse(LS.get(LSA)||'null'); if(!a)return;
-    $('kFrag').value=a.kFrag;$('kOnda').value=a.kOnda;$('kDan').value=a.kDan;$('kSeg').value=a.kSeg;
-    $('setCapa').value=a.capa||'mapa';$('setPrec').value=a.prec||'4';
-    if(a.capa==='satelite'){map.removeLayer(capaMapa);capaSat.addTo(map);}
-  }catch(e){}
-}
-$('btnGuardarAjustes').addEventListener('click',guardarAjustes);
-$('btnBorrarTodo').addEventListener('click',()=>{
-  if(confirm('¿Borrar TODAS las fichas y ajustes guardados?')){LS.del(LSK);LS.del(LSA);pintarFichas();alert('Datos borrados.');}
-});
-function datosFicha(){
-  return {
-    nombre:$('fNombre').value||'SIN NOMBRE', fecha:$('fFecha').value, hora:$('fHora').value,
-    operador:$('fOperador').value, obs:$('fObs').value,
-    tipo:$('tTipo').value, peso:$('tPeso').value,
-    amenaza:S.amenaza, mgrs:S.amenaza?proj(S.amenaza.lat,S.amenaza.lng,prec()):null,
-    gps:S.gps, distancias:S.distancias, guardado:new Date().toISOString()
+function setPoint(kind){
+  return ll=>{
+    const prev=kind==='pci'?pci:pceod;
+    if(prev)prev.marker.remove();
+    const m=L.marker(ll,{icon:tagIcon(kind==='pci'?'PCI':'EOD',kind==='pci'?'':'eod')}).addTo(map);
+    if(kind==='pci'){pci={latlng:ll,marker:m};btnDelPci.disabled=false;log('PCI colocado — '+dms(ll));}
+    else{pceod={latlng:ll,marker:m};btnDelEod.disabled=false;log('PCEOD colocado — '+dms(ll));}
+    mapInfo.textContent=(kind==='pci'?'PCI':'PCEOD')+' colocado. Toca de nuevo el botón para recolocarlo.';
+    refreshCoords();
   };
 }
-function pintarFichas(){
-  const fs=JSON.parse(LS.get(LSK)||'[]'), lc=$('listaFichas');
-  if(!fs.length){lc.innerHTML='<p style="color:var(--muted);font-size:12px">Sin fichas guardadas.</p>';return;}
-  lc.innerHTML='';
-  fs.forEach((f,i)=>{
-    lc.insertAdjacentHTML('beforeend',`<div class="ficha-item">
-      <div><div class="name">${f.nombre}</div><div class="meta">${f.fecha||'—'} ${f.hora||''} · ${f.tipo} · W=${f.peso} kg · ${f.mgrs||'sin coordenadas'}</div></div>
-      <div style="display:flex;gap:6px"><button class="btn small" onclick="cargarFicha(${i})">Cargar</button><button class="btn small danger" onclick="borrarFicha(${i})">✕</button></div>
-    </div>`);
+btnPlace.onclick=()=>{placing='threat';mapInfo.textContent='Toca el mapa para indicar la posición de la amenaza…';btnPlace.textContent='⌖ Toca el mapa…'};
+btnPci.onclick=()=>{placing='pci';mapInfo.textContent='Toca el mapa para colocar el PCI…'};
+btnEod.onclick=()=>{placing='eod';mapInfo.textContent='Toca el mapa para colocar el PCEOD…'};
+btnDelPci.onclick=()=>{
+  if(!pci){btnDelPci.disabled=true;return;}
+  if(!confirm('¿Eliminar el punto PCI del mapa?'))return;
+  pci.marker.remove();pci=null;btnDelPci.disabled=true;
+  mapInfo.textContent='PCI eliminado del mapa.';log('PCI borrado del mapa.');refreshCoords();
+};
+btnDelEod.onclick=()=>{
+  if(!pceod){btnDelEod.disabled=true;return;}
+  if(!confirm('¿Eliminar el punto PCEOD del mapa?'))return;
+  pceod.marker.remove();pceod=null;btnDelEod.disabled=true;
+  mapInfo.textContent='PCEOD eliminado del mapa.';log('PCEOD borrado del mapa.');refreshCoords();
+};
+map.on('click',e=>{
+  if(!placing)return;
+  if(placing==='threat'){setThreat([e.latlng.lat,e.latlng.lng]);log('Amenaza posicionada (sin fijar) — '+dms(active.latlng));}
+  else setPoint(placing)([e.latlng.lat,e.latlng.lng]);
+  placing=null;btnPlace.textContent='📍 Posicionar en mapa amenaza';
+});
+btnFix.onclick=()=>{
+  if(!active)return;
+  const t=active;active=null;
+  t.marker.dragging.disable();
+  threats.push(t);btnFix.disabled=true;btnDel.disabled=false;
+  mapInfo.textContent='Amenaza '+t.label+' fijada. Puedes posicionar otra amenaza.';
+  log('Amenaza '+t.label+' FIJADA — '+desc()+' — '+dms(t.latlng));
+  refreshCoords();
+};
+btnDel.onclick=()=>{
+  const t=active||threats[threats.length-1];
+  if(!t){btnDel.disabled=true;return;}
+  if(!confirm('¿Borrar la amenaza '+(t.label||'')+' del mapa?'))return;
+  clearCircles(t.circles);t.marker.remove();
+  if(active)active=null;else threats.pop();
+  if(!threats.length&&!active)btnDel.disabled=true;
+  log('Amenaza borrada del mapa.');
+  refreshCoords();
+};
+/* ---- GPS ---- */
+gpsBtn.onclick=()=>{
+  if(watchId){navigator.geolocation.clearWatch(watchId);watchId=null;gpsBtn.textContent='◎ Activar mi posicionamiento GPS';return;}
+  if(!('geolocation' in navigator)){mapInfo.textContent='Este navegador no soporta geolocalización.';return;}
+  gpsBtn.textContent='⏳ Localizando…';
+  watchId=navigator.geolocation.watchPosition(p=>{
+    const ll=[p.coords.latitude,p.coords.longitude];
+    if(!uMarker){uMarker=L.marker(ll,{icon:personIcon,zIndexOffset:1000}).addTo(map).bindTooltip('Tu posición (GPS en vivo)');map.setView(ll,15);}
+    else uMarker.setLatLng(ll);
+    gpsBtn.textContent='⏹ GPS activo en tiempo real (toca para detener)';
+    refreshCoords();
+  },()=>{gpsBtn.textContent='◎ Activar mi posicionamiento GPS';mapInfo.textContent='No se pudo obtener tu GPS. Concede permiso de ubicación.';},{enableHighAccuracy:true,maximumAge:2000,timeout:10000});
+  log('Seguimiento GPS en tiempo real activado.');
+};
+/* ---- Coordenadas / exposición ---- */
+function dms(ll){
+  const f=(v,pos,neg)=>{const d=Math.abs(v),g=Math.floor(d),m=Math.floor((d-g)*60),s=(((d-g)*60-m)*60).toFixed(1);return g+'°'+m+"'"+s+'" '+(v>=0?pos:neg)};
+  return f(ll[0],'N','S')+' '+f(ll[1],'E','O');
+}
+function mgrs(ll){
+  const lat=ll[0],lon=ll[1];
+  if(isNaN(lat)||isNaN(lon))return '—';
+  const zone=Math.min(60,Math.max(1,Math.floor((lon+180)/6)+1));
+  const a=6378137.0,f=1/298.257223563,e2=f*(2-f),k0=0.9996;
+  const latRad=lat*Math.PI/180,lonRad=lon*Math.PI/180;
+  const lonC=((zone-1)*6-180+3)*Math.PI/180;
+  const N=a/Math.sqrt(1-e2*Math.pow(Math.sin(latRad),2));
+  const T=Math.pow(Math.tan(latRad),2);
+  const C=e2/Math.pow(Math.cos(latRad),2);
+  const A=(lonRad-lonC)*Math.cos(latRad);
+  const M=a*((1-e2/4-3*e2*e2/64-5*e2*e2*e2/256)*latRad
+    -(3*e2/8+3*e2*e2/32+45*e2*e2*e2/1024)*Math.sin(2*latRad)
+    +(15*e2*e2/256+45*e2*e2*e2/1024)*Math.sin(4*latRad)
+    -(35*e2*e2*e2/3072)*Math.sin(6*latRad));
+  let east=k0*N*(A+(1-T+C)*Math.pow(A,3)/6+(5-18*T+T*T+72*C-58*e2)*Math.pow(A,5)/120)+500000;
+  let north=k0*(M+N*Math.tan(latRad)*(A*A/2+(5-T+9*C+4*C*C)*Math.pow(A,4)/24+(61-58*T+T*T+600*C-330*e2)*Math.pow(A,6)/720));
+  if(lat<0)north+=10000000;
+  const set=((zone-1)%6);
+  const colSet=['ABCDEFGH','JKLMNPQR','STUVWXYZ','ABCDEFGH','JKLMNPQR','STUVWXYZ'][set];
+  const colIdx=Math.floor(east/100000)-1;
+  if(colIdx<0||colIdx>7)return '—';
+  const colChar=colSet[colIdx];
+  const band='CDEFGHJKLMNPQRSTUVWX'[Math.min(19,Math.max(0,Math.floor((Math.max(-80,Math.min(79.9,lat))+80)/8)))];
+  const rowLetters=(zone%2===1)?'ABCDEFGHJKLMNPQRSTUV':'FGHJKLMNPQRSTUVABCDE';
+  const rowChar=rowLetters[Math.floor((north%2000000)/100000)];
+  return zone+band+' '+colChar+rowChar+' '+String(Math.floor(east%100000)).padStart(5,'0')+' '+String(Math.floor(north%100000)).padStart(5,'0');
+}
+function coordLine(ll){return dms(ll)+'\n   MGRS: '+mgrs(ll);}
+function userLL(){return uMarker?uMarker.getLatLng():null}
+function distM(a,b){return map.distance(a,b)}
+function desc(){
+  if(mode==='ied')return cont.selectedOptions[0].text+' · '+exp.selectedOptions[0].text;
+  return document.getElementById('uo2').selectedOptions[0].text;
+}
+function zoneState(d){
+  const out=radii().out;
+  const rL=out.find(r=>r.lbl.indexOf('letal')>=0).r,
+        rO=out.find(r=>r.lbl.indexOf('daño mínimo')>=0).r,
+        rF=out.find(r=>r.lbl.indexOf('Fragmentación')>=0).r;
+  return d<rL?'¡DENTRO DE ZONA LETAL!':d<rO?'DENTRO DE ZONA DE ONDA DE CHOQUE':(frag()&&d<rF)?'DENTRO DE ZONA DE FRAGMENTACIÓN':null;
+}
+function refreshCoords(){
+  let h='',my=userLL();
+  const list=[...threats];if(active)list.push(active);
+  if(!list.length&&!pci&&!pceod){coordsBox.textContent='Sin amenazas colocadas todavía.';return;}
+  const pts=[];
+  if(my)pts.push(['GPS (tiempo real)',my]);
+  if(pci)pts.push(['PCI',pci.latlng]);
+  if(pceod)pts.push(['PCEOD',pceod.latlng]);
+  list.forEach(t=>{
+    h+='◆ AMENAZA '+(t.label||'')+' — '+coordLine(t.latlng)+'\n   '+desc()+' · '+wkg.toFixed(wkg<1?3:1)+' kg NEQ\n';
+    pts.forEach(p=>{const d=distM(p[1],t.latlng),z=zoneState(d);
+      h+='   '+p[0]+' → amenaza: '+fmt(d)+(z?'  <span class="warn">⚠ '+z+'</span>':'')+'\n';});
+  });
+  if(pci)h+='◆ PCI — '+coordLine(pci.latlng)+'\n';
+  if(pceod)h+='◆ PCEOD — '+coordLine(pceod.latlng)+'\n';
+  if(!pci&&!pceod)h+='◆ PCI/PCEOD: sin colocar.\n';
+  if(my)h+='◆ Tu posición GPS — '+coordLine([my.lat,my.lng])+'\n';
+  coordsBox.innerHTML=h;
+}
+function update(){
+  const{out}=radii();
+  tbl.innerHTML=out.map(r=>'<tr><td><i class="dot" style="background:'+r.col+(r.sec?';border-radius:0':'')+'"></i>'+r.lbl+'</td><td class="r"><b>'+fmt(r.r)+'</b></td></tr>').join('');
+  threats.forEach(drawThreat);if(active)drawThreat(active);
+  refreshCoords();
+}
+/* ---- Registro ---- */
+let logItems=[];
+function log(txt){
+  logItems.unshift({t:new Date().toLocaleTimeString('es-ES'),txt});
+  renderLog();
+}
+function renderLog(){
+  if(!logItems.length){logBox.textContent='Sin incidentes guardados todavía en esta sesión.';return;}
+  logBox.innerHTML='';
+  logItems.forEach((it,i)=>{
+    const d=document.createElement('div');d.className='lio';
+    d.innerHTML='<span><b style="color:var(--dim)">'+it.t+'</b> — '+it.txt+'</span>';
+    const b=document.createElement('button');b.className='x';b.textContent='✖';
+    b.onclick=()=>{logItems.splice(i,1);renderLog();};
+    d.appendChild(b);logBox.appendChild(d);
   });
 }
-window.cargarFicha=i=>{
-  const fs=JSON.parse(LS.get(LSK)||'[]'), f=fs[i]; if(!f)return;
-  $('fNombre').value=f.nombre;$('fFecha').value=f.fecha;$('fHora').value=f.hora;
-  $('fOperador').value=f.operador;$('fObs').value=f.obs;$('tTipo').value=f.tipo;$('tPeso').value=f.peso;
-  if(f.amenaza) colocarAmenaza(f.amenaza);
-  if(f.gps){S.gps=f.gps;$('cGPS').textContent=`${f.gps.lat.toFixed(6)}, ${f.gps.lng.toFixed(6)}`;$('cGPSMGRS').textContent=proj(f.gps.lat,f.gps.lng,prec());calcDistGPS();}
-  alert('Ficha cargada: '+f.nombre);
+/* ---- Informe PDF ---- */
+function captureMap(){
+  return new Promise(res=>{
+    if(!window.html2canvas){res(null);return;}
+    html2canvas(document.getElementById('map'),{useCORS:true,scale:1,backgroundColor:'#0D1319',logging:false})
+      .then(c=>{const d=c.toDataURL('image/png');res(d&&d.length>5000?d:null);}).catch(()=>res(null));
+  });
+}
+pdfBtn.onclick=async()=>{
+  if(!window.jspdf){pdfBox.textContent='No se pudo cargar jsPDF. Comprueba conexión a internet.';return;}
+  pdfBox.textContent='Capturando mapa y generando PDF…';
+  const img=await captureMap();
+  const{jsPDF}=window.jspdf;const pdf=new jsPDF('p','mm','a4');
+  const X=14;let y=16;
+  const line=(t,s)=>{pdf.setFontSize(s||10);pdf.text(t,X,y);y+=s===16?9:6;};
+  pdf.setFontSize(20);pdf.text('PERIMETER GPS — Informe de perímetros',X,y);y+=10;
+  line('Fecha: '+new Date().toLocaleString('es-ES'),10);y+=2;
+  line('1. Amenazas',14);
+  const list=[...threats];if(active)list.push(active);
+  if(!list.length)line('Sin amenazas colocadas.');
+  list.forEach(t=>{line('· '+(t.label||'Amenaza')+' — '+dms(t.latlng));line('  MGRS: '+mgrs(t.latlng),9);line('  '+desc()+' · '+wkg.toFixed(wkg<1?3:1)+' kg NEQ',9);});
+  y+=2;line('2. Distancias calculadas (K=15,4 m/kg^⅓ · daño mínimo K=18)',14);
+  radii().out.forEach(r=>line('· '+r.lbl+': '+fmt(r.r),9));
+  y+=2;line('3. Puntos de control',14);
+  line('· PCI: '+(pci?dms(pci.latlng):'no colocado'),9);
+  line('· PCEOD: '+(pceod?dms(pceod.latlng):'no colocado'),9);
+  const my=userLL();
+  y+=2;line('4. Exposición',14);
+  if(!my)line('GPS no activado — sin posición propia.',9);
+  else{line('· Posición GPS: '+dms([my.lat,my.lng]),9);
+    list.forEach(t=>{const d=distM(my,t.latlng);line('· Distancia a '+(t.label||'amenaza')+': '+fmt(d)+(zoneState(d)?'  '+zoneState(d):''),9);});}
+  if(pci){list.forEach(t=>{const d=distM(pci.latlng,t.latlng);line('· PCI → '+(t.label||'amenaza')+': '+fmt(d)+(zoneState(d)?'  '+zoneState(d):''),9);});}
+  if(pceod){list.forEach(t=>{const d=distM(pceod.latlng,t.latlng);line('· PCEOD → '+(t.label||'amenaza')+': '+fmt(d)+(zoneState(d)?'  '+zoneState(d):''),9);});}
+  y+=2;line('5. Registro de incidentes',14);
+  if(!logItems.length)line('Sin incidentes registrados.',9);
+  else logItems.slice(0,20).forEach(it=>line('· ['+it.t+'] '+it.txt,9));
+  y+=4;line('6. Captura del mapa',14);
+  if(img){pdf.addImage(img,'PNG',X,y,182,182*0.62);}
+  else line('No se pudo capturar el mapa (sin conexión o sin amenaza).',9);
+  pdf.save('informe_perimetro_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.pdf');
+  pdfBox.textContent='Informe PDF descargado con la captura del mapa insertada.';
 };
-window.borrarFicha=i=>{
-  const fs=JSON.parse(LS.get(LSK)||'[]'); fs.splice(i,1);
-  LS.set(LSK,JSON.stringify(fs)); pintarFichas();
-};
-$('btnGuardarFicha').addEventListener('click',()=>{
-  const fs=JSON.parse(LS.get(LSK)||'[]');
-  fs.push(datosFicha()); LS.set(LSK,JSON.stringify(fs));
-  pintarFichas(); alert('Ficha guardada: '+($('fNombre').value||'SIN NOMBRE'));
-});
-$('btnNuevaFicha').addEventListener('click',()=>{
-  ['fNombre','fFecha','fHora','fOperador','fObs'].forEach(id=>$(id).value='');
-  alert('Ficha nueva: introduce los datos manualmente (fecha y hora incluidas).');
-});
-
-/* ================= INFORME ================= */
-$('btnInforme').addEventListener('click',()=>{
-  const f=datosFicha(), t=PERIMETROS.map(p=>`<tr><td style="color:${p.color}">${p.n}</td><td>${p.nombre}</td><td>${S.distancias?fmt(S.distancias[p.key])+' m':'—'}</td></tr>`).join('');
-  const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Informe PERIMETER GPS</title>
-  <style>body{font-family:monospace;color:#111;padding:24px}h1{font-family:sans-serif;text-transform:uppercase;letter-spacing:.1em;border-bottom:3px solid #C81E1E;padding-bottom:8px}table{border-collapse:collapse;width:100%;margin:14px 0}th,td{border:1px solid #999;padding:6px 10px;font-size:13px}th{background:#eee;text-transform:uppercase;font-size:11px}.peligro{color:#C81E1E;text-transform:uppercase;font-weight:bold}</style></head><body>
-  <h1>PERIMETER GPS — INFORME DE SEGURIDAD IED/UXO</h1>
-  <p><b>Ficha:</b> ${f.nombre} &nbsp;·&nbsp; <b>Fecha (manual):</b> ${f.fecha||'—'} ${f.hora||''} &nbsp;·&nbsp; <b>Operador:</b> ${f.operador||'—'}</p>
-  <p><b>Tipo de amenaza:</b> ${f.tipo} &nbsp;·&nbsp; <b>Peso explosivo W:</b> ${f.peso} kg TNT &nbsp;·&nbsp; <b>Fórmula:</b> R = K · ∛W</p>
-  <p><b>Coordenadas de la amenaza:</b> ${f.amenaza?f.amenaza.lat.toFixed(6)+', '+f.amenaza.lng.toFixed(6):'—'} &nbsp;·&nbsp; <b>MGRS:</b> ${f.mgrs||'—'}</p>
-  <p><b>Posición GPS:</b> ${f.gps?f.gps.lat.toFixed(6)+', '+f.gps.lng.toFixed(6):'—'}</p>
-  <h3>Radios calculados (orden de la leyenda)</h3><table><tr><th>#</th><th>Perímetro</th><th>Radio</th></tr>${t}</table>
-  <p class="peligro">ZONA DE PELIGRO: MANTENER TODOS LOS EFECTIVOS FUERA DEL PERÍMETRO DE SEGURIDAD. PROHIBIDO APROXIMARSE AL PERÍMETRO DE FRAGMENTACIÓN.</p>
-  <p><b>Observaciones:</b> ${f.obs||'—'}</p>
-  <p style="font-size:11px;color:#666">Generado el ${new Date().toLocaleString('es-ES')} · PERIMETER GPS · Repositorio DISEGES</p>
-  <script>window.print()<\/script></body></html>`);
-  w.document.close();
-});
-$('btnInformeTxt').addEventListener('click',()=>{
-  const f=datosFicha();
-  const lineas=['PERIMETER GPS — INFORME IED/UXO','================================',
-    `Ficha: ${f.nombre}`,`Fecha (manual): ${f.fecha||'—'} ${f.hora||''}`,`Operador: ${f.operador||'—'}`,
-    `Tipo: ${f.tipo} | Peso W: ${f.peso} kg TNT | Fórmula: R = K · ∛W`,
-    `Amenaza: ${f.amenaza?f.amenaza.lat.toFixed(6)+', '+f.amenaza.lng.toFixed(6):'—'} | MGRS: ${f.mgrs||'—'}`,
-    `GPS: ${f.gps?f.gps.lat.toFixed(6)+', '+f.gps.lng.toFixed(6):'—'}`,''];
-  if(S.distancias) PERIMETROS.forEach(p=>lineas.push(`${p.n}. ${p.nombre}: ${fmt(S.distancias[p.key])} m`));
-  lineas.push('','ZONA DE PELIGRO: MANTENERSE FUERA DEL PERÍMETRO DE SEGURIDAD.','',
-    `Observaciones: ${f.obs||'—'}`,`Generado: ${new Date().toLocaleString('es-ES')}`);
-  const b=new Blob([lineas.join('\n')],{type:'text/plain'}), a=document.createElement('a');
-  a.href=URL.createObjectURL(b); a.download=`informe_${(f.nombre||'perimeter').replace(/\s+/g,'_')}.txt`; a.click();
-});
-
-/* ================= README ================= */
-$('btnREADME').addEventListener('click',()=>$('readmeModal').classList.add('open'));
-$('btnCerrarReadme').addEventListener('click',()=>$('readmeModal').classList.remove('open'));
-$('readmeModal').addEventListener('click',e=>{if(e.target===$('readmeModal'))$('readmeModal').classList.remove('open');});
-
-/* ================= INIT ================= */
-$('tPeso').addEventListener('input',()=>{if(S.amenaza){S.distancias=calcularDistancias();dibujarPerimetros();}});
-['kFrag','kOnda','kDan','kSeg'].forEach(id=>$(id).addEventListener('input',()=>{if(S.amenaza){S.distancias=calcularDistancias();dibujarPerimetros();}}));
-$('setCapa').addEventListener('change',e=>{
-  if(e.target.value==='satelite'){map.removeLayer(capaMapa);capaSat.addTo(map);}else{map.removeLayer(capaSat);capaMapa.addTo(map);}
-});
-$('setPrec').addEventListener('change',()=>{
-  if(S.amenaza)$('cMGRS').textContent=proj(S.amenaza.lat,S.amenaza.lng,prec());
-  if(S.gps)$('cGPSMGRS').textContent=proj(S.gps.lat,S.gps.lng,prec());
-});
-cargarAjustes(); pintarFichas();
-setTimeout(()=>map.invalidateSize(),300);
+update();
 </script>
 </body>
 </html>
